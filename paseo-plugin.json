@@ -1,0 +1,9 @@
+{
+  "id": "thinking-translate",
+  "name": "Thinking Translate",
+  "description": "Translate reasoning into Chinese with Google Translate and preserve Markdown.",
+  "requirements": {
+    "paseo": ">=0.11.2 || >=0.12.0-beta.0 <0.12.0"
+  },
+  "build": [["npm", "ci", "--ignore-scripts"]]
+}
