@@ -15,37 +15,43 @@ import {
   type GoogleApiVersion,
   type TranslationProvider,
 } from "../shared/contract";
+import { useMessages, type Messages } from "./i18n";
 
 type Ready = Extract<SettingsState<typeof settingsSchema>, { status: "ready" }>;
 
-const providers: readonly { label: string; value: TranslationProvider }[] = [
-  { label: "Google 免费接口", value: "google-free" },
-  { label: "Google Cloud", value: "google-cloud" },
-  { label: "微软翻译", value: "microsoft" },
-];
-const versions: readonly { label: string; value: GoogleApiVersion }[] = [
-  { label: "v2（API Key）", value: "v2" },
-  { label: "v3（OAuth Access Token）", value: "v3" },
-];
+function providerOptions(m: Messages): readonly { label: string; value: TranslationProvider }[] {
+  return [
+    { label: m.serviceFree, value: "google-free" },
+    { label: m.serviceGoogle, value: "google-cloud" },
+    { label: m.serviceMicrosoft, value: "microsoft" },
+  ];
+}
 
-function validationMessage(error: ZodError): string {
+function versionOptions(m: Messages): readonly { label: string; value: GoogleApiVersion }[] {
+  return [
+    { label: m.googleV2, value: "v2" },
+    { label: m.googleV3, value: "v3" },
+  ];
+}
+
+function validationMessage(error: ZodError, m: Messages): string {
   const field = String(error.issues[0]?.path[0] ?? "");
   switch (field) {
     case "googleApiKey":
-      return "Google Cloud v2 需要 API Key。";
+      return m.errorGoogleKey;
     case "googleAccessToken":
-      return "Google Cloud v3 需要 OAuth Access Token。";
+      return m.errorGoogleToken;
     case "googleProjectId":
-      return "Google Cloud v3 需要项目 ID。";
+      return m.errorGoogleProject;
     case "microsoftApiKey":
-      return "微软翻译需要 API Key。";
+      return m.errorMicrosoftKey;
     case "targetLanguage":
     case "endpoint":
     case "googleEndpoint":
     case "microsoftEndpoint":
-      return "请填写有效的目标语言和 HTTP(S) endpoint。";
+      return m.errorEndpoint;
     default:
-      return error.issues[0]?.message ?? "设置无效。";
+      return error.issues[0]?.message ?? m.errorInvalid;
   }
 }
 
@@ -62,6 +68,7 @@ function Controls({
   onEdit(): void;
   onReload(): void;
 }) {
+  const m = useMessages();
   const [draft, setDraft] = useState(() => ({ values: state.values, revision: state.revision }));
   const [validation, setValidation] = useState<string | null>(null);
   function change(values: Ready["values"]) {
@@ -71,26 +78,23 @@ function Controls({
   }
   const values = draft.values;
   return (
-    <SettingsSection
-      title="Thinking 翻译"
-      info="思考文本由 daemon 发送至所选翻译服务。Google 免 key 接口可能限流；密钥明文保存在 daemon 设置文件中（权限 0600）。"
-    >
+    <SettingsSection title={m.settingsTitle} info={m.settingsInfo}>
       <SettingsSwitch
-        label="自动翻译"
+        label={m.autoTranslate}
         value={values.enabled}
         disabled={state.saving}
         onValueChange={(enabled) => change({ ...values, enabled })}
       />
       <SettingsSelect
-        label="翻译服务"
+        label={m.service}
         value={values.provider}
-        options={providers}
+        options={providerOptions(m)}
         disabled={state.saving}
         onValueChange={(provider) => change({ ...values, provider })}
       />
       <SettingsInput
-        label="目标语言"
-        hint="Google 使用 zh-CN / zh-TW；微软会自动转换为 zh-Hans / zh-Hant。"
+        label={m.targetLanguage}
+        hint={m.targetLanguageHint}
         initialValue={values.targetLanguage}
         disabled={state.saving}
         onChangeText={(targetLanguage) => change({ ...values, targetLanguage })}
@@ -98,8 +102,8 @@ function Controls({
       {values.provider === "google-free" ? (
         <SettingsInput
           key="google-free-endpoint"
-          label="Endpoint"
-          hint="免 key 接口，返回 Google translate_a/t 的 JSON 结构。"
+          label={m.endpoint}
+          hint={m.freeEndpointHint}
           initialValue={values.endpoint}
           disabled={state.saving}
           onChangeText={(endpoint) => change({ ...values, endpoint })}
@@ -108,17 +112,17 @@ function Controls({
       {values.provider === "google-cloud" ? (
         <>
           <SettingsSelect
-            label="Google API 版本"
+            label={m.googleVersion}
             value={values.googleVersion}
-            options={versions}
+            options={versionOptions(m)}
             disabled={state.saving}
             onValueChange={(googleVersion) => change({ ...values, googleVersion })}
           />
           {values.googleVersion === "v2" ? (
             <SettingsInput
               key="google-v2-key"
-              label="Google API Key"
-              hint="在 Google Cloud Console 启用 Cloud Translation API 后创建。"
+              label={m.googleApiKey}
+              hint={m.googleApiKeyHint}
               initialValue={values.googleApiKey}
               secureTextEntry
               disabled={state.saving}
@@ -128,8 +132,8 @@ function Controls({
             <>
               <SettingsInput
                 key="google-v3-token"
-                label="OAuth Access Token"
-                hint="v3 不支持 API Key；令牌约 1 小时后过期，需要定期更新。"
+                label={m.googleToken}
+                hint={m.googleTokenHint}
                 initialValue={values.googleAccessToken}
                 secureTextEntry
                 disabled={state.saving}
@@ -137,7 +141,7 @@ function Controls({
               />
               <SettingsInput
                 key="google-v3-project"
-                label="Google Cloud 项目 ID"
+                label={m.googleProject}
                 initialValue={values.googleProjectId}
                 disabled={state.saving}
                 onChangeText={(googleProjectId) => change({ ...values, googleProjectId })}
@@ -146,8 +150,8 @@ function Controls({
           )}
           <SettingsInput
             key={`google-endpoint-${values.googleVersion}`}
-            label="Google API Endpoint"
-            hint="基础地址，默认 https://translation.googleapis.com；版本路径由插件拼接。"
+            label={m.googleEndpoint}
+            hint={m.googleEndpointHint}
             initialValue={values.googleEndpoint}
             disabled={state.saving}
             onChangeText={(googleEndpoint) => change({ ...values, googleEndpoint })}
@@ -158,8 +162,8 @@ function Controls({
         <>
           <SettingsInput
             key="microsoft-key"
-            label="微软 API Key"
-            hint="Azure 翻译资源的密钥。"
+            label={m.microsoftKey}
+            hint={m.microsoftKeyHint}
             initialValue={values.microsoftApiKey}
             secureTextEntry
             disabled={state.saving}
@@ -167,16 +171,16 @@ function Controls({
           />
           <SettingsInput
             key="microsoft-region"
-            label="微软区域"
-            hint="多区域资源填区域，例如 eastasia；全局资源可留空。"
+            label={m.microsoftRegion}
+            hint={m.microsoftRegionHint}
             initialValue={values.microsoftRegion}
             disabled={state.saving}
             onChangeText={(microsoftRegion) => change({ ...values, microsoftRegion })}
           />
           <SettingsInput
             key="microsoft-endpoint"
-            label="微软 Endpoint"
-            hint="默认 https://api.cognitive.microsofttranslator.com。"
+            label={m.microsoftEndpoint}
+            hint={m.microsoftEndpointHint}
             initialValue={values.microsoftEndpoint}
             disabled={state.saving}
             onChangeText={(microsoftEndpoint) => change({ ...values, microsoftEndpoint })}
@@ -184,13 +188,13 @@ function Controls({
         </>
       ) : null}
       <SettingsAction
-        label="宿主级设置"
-        actionLabel={state.saving ? "保存中…" : "保存"}
+        label={m.hostSettings}
+        actionLabel={state.saving ? m.saving : m.save}
         disabled={state.saving}
         onPress={() => {
           const parsed = settingsSchema.safeParse(values);
           if (!parsed.success) {
-            setValidation(validationMessage(parsed.error));
+            setValidation(validationMessage(parsed.error, m));
             return;
           }
           setValidation(null);
@@ -205,8 +209,8 @@ function Controls({
         </Text>
       ) : null}
       <SettingsAction
-        label="重新读取设置并放弃草稿"
-        actionLabel="重新读取"
+        label={m.reload}
+        actionLabel={m.reloadAction}
         disabled={state.saving}
         onPress={onReload}
       />
@@ -215,6 +219,7 @@ function Controls({
 }
 
 export function TranslationSettings({ theme, layout }: PluginSurfaceProps) {
+  const m = useMessages();
   const state = useSettings(settings);
   const [generation, setGeneration] = useState(0);
   const [saved, setSaved] = useState(false);
@@ -239,21 +244,21 @@ export function TranslationSettings({ theme, layout }: PluginSurfaceProps) {
           }}
         />
       ) : (
-        <SettingsSection title="Thinking 翻译">
+        <SettingsSection title={m.settingsTitle}>
           <Text style={{ color: theme.colors.foreground }}>
-            {state.status === "loading" ? "正在读取设置…" : state.error}
+            {state.status === "loading" ? m.loading : state.error}
           </Text>
           {state.status !== "loading" ? (
-            <SettingsAction label="读取失败" actionLabel="重试" onPress={state.reload} />
+            <SettingsAction label={m.readFailed} actionLabel={m.retry} onPress={state.reload} />
           ) : null}
           {state.status === "invalid" ? (
-            <SettingsAction label="恢复默认设置" actionLabel="重置" onPress={state.reset} />
+            <SettingsAction label={m.restoreDefaults} actionLabel={m.reset} onPress={state.reset} />
           ) : null}
         </SettingsSection>
       )}
       {saved ? (
         <Text accessibilityLiveRegion="polite" style={{ color: theme.colors.statusSuccess }}>
-          设置已保存
+          {m.saved}
         </Text>
       ) : null}
     </ScrollView>

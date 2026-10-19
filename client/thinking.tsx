@@ -5,21 +5,11 @@ import { useRpc, useSettings, type PluginTimelineItemProps } from "@getpaseo/plu
 import { settings, translate, type Reasoning } from "../shared/contract";
 import { parseMarkdown, translationTexts } from "../shared/markdown";
 import { createBatchTranslator } from "./batch";
+import { useMessages } from "./i18n";
 import { Markdown } from "./markdown";
 
-const failures: Record<string, string> = {
-  network: "网络错误",
-  timeout: "请求超时",
-  rate_limit: "请求被限流",
-  auth: "密钥无效或无权限",
-  http: "服务返回错误",
-  invalid_response: "服务响应格式异常",
-  config: "翻译设置不完整",
-  disposed: "翻译已取消",
-  disabled: "自动翻译已关闭",
-};
-
 export function Thinking({ item, theme, layout }: PluginTimelineItemProps<Reasoning>) {
+  const m = useMessages();
   const { text, phase } = item.data;
   const preferences = useSettings(settings);
   const rpc = useRpc(translate);
@@ -33,7 +23,9 @@ export function Thinking({ item, theme, layout }: PluginTimelineItemProps<Reason
   const values = preferences.status === "ready" ? preferences.values : null;
   const enabled = values?.enabled === true;
   const translating = enabled && expanded && !original;
-  const translationLabel = /^zh(?:-|$)/i.test(values?.targetLanguage ?? "zh-CN") ? "中文" : "译文";
+  const chineseTarget = /^zh(?:-|$)/i.test(values?.targetLanguage ?? "zh-CN");
+  const translationLabel = chineseTarget ? m.chinese : m.translation;
+  const showTranslationLabel = chineseTarget ? m.showChinese : m.showTranslation;
   const queries = useQueries({
     queries: texts.map((source) => ({
       // A settings revision prevents a late RPC from populating a later configuration's cache.
@@ -61,8 +53,8 @@ export function Thinking({ item, theme, layout }: PluginTimelineItemProps<Reason
   let pending = false;
   queries.forEach((query, index) => {
     if (query.data?.status === "translated") translations.set(texts[index], query.data.text);
-    else if (query.data?.status === "error") errors.add(failures[query.data.code]);
-    else if (query.isError) errors.add("翻译连接失败");
+    else if (query.data?.status === "error") errors.add(m.failures[query.data.code]);
+    else if (query.isError) errors.add(m.connectionFailed);
     if (query.isFetching) pending = true;
   });
   const colors = theme.colors;
@@ -82,17 +74,17 @@ export function Thinking({ item, theme, layout }: PluginTimelineItemProps<Reason
         </Pressable>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={original ? `显示${translationLabel}` : "显示原文"}
+          accessibilityLabel={original ? showTranslationLabel : m.showOriginal}
           onPress={() => setOriginal((value) => !value)}
           style={button}
         >
           <Text style={[label, { color: colors.accent }]}>
-            {original ? translationLabel : "原文"}
+            {original ? translationLabel : m.original}
           </Text>
         </Pressable>
-        {enabled && expanded && pending ? <Text style={label}>翻译中…</Text> : null}
+        {enabled && expanded && pending ? <Text style={label}>{m.translating}</Text> : null}
         {!enabled && preferences.status === "ready" ? (
-          <Text style={label}>自动翻译已关闭</Text>
+          <Text style={label}>{m.autoDisabled}</Text>
         ) : null}
       </View>
       {expanded ? (
@@ -106,11 +98,11 @@ export function Thinking({ item, theme, layout }: PluginTimelineItemProps<Reason
       {enabled && expanded && errors.size ? (
         <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
           <Text accessibilityRole="alert" style={[label, { color: colors.statusWarning }]}>
-            {Array.from(errors).join("；")}，失败部分显示原文。
+            {Array.from(errors).join(m.listSeparator) + m.failuresSuffix}
           </Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="重试翻译"
+            accessibilityLabel={m.retryTranslation}
             style={button}
             disabled={pending}
             onPress={() => {
@@ -119,13 +111,14 @@ export function Thinking({ item, theme, layout }: PluginTimelineItemProps<Reason
               });
             }}
           >
-            <Text style={[label, { color: colors.accent }]}>重试</Text>
+            <Text style={[label, { color: colors.accent }]}>{m.retry}</Text>
           </Pressable>
         </View>
       ) : null}
       {preferences.status === "error" || preferences.status === "invalid" ? (
         <Text accessibilityRole="alert" style={[label, { color: colors.statusWarning }]}>
-          无法读取翻译设置：{preferences.error}
+          {m.invalidSettings}
+          {preferences.error}
         </Text>
       ) : null}
     </View>

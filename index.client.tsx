@@ -26,7 +26,7 @@ export default function contribute(client: PluginClientContext) {
   });
   client.addSettingsScreen({
     id: "translation",
-    title: "Thinking 翻译",
+    title: "Thinking Translate",
     icon: "Languages",
     Component: TranslationSettings,
   });

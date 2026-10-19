@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Linking, Platform, ScrollView, Text, View, type TextStyle } from "react-native";
 import type { PluginTheme } from "@getpaseo/plugin";
 import { textPieces, type MarkdownNode } from "../shared/markdown";
+import { useMessages } from "./i18n";
 
 export function Markdown({
   nodes,
@@ -14,6 +15,7 @@ export function Markdown({
   theme: PluginTheme;
   compact: boolean;
 }) {
+  const m = useMessages();
   const [linkError, setLinkError] = useState<string | null>(null);
   const colors = theme.colors;
   const codeFont = Platform.OS === "ios" ? "Menlo" : "monospace";
@@ -49,7 +51,7 @@ export function Markdown({
         onPress={
           safeUrl
             ? () => {
-                void Linking.openURL(safeUrl).catch(() => setLinkError("无法打开链接：" + safeUrl));
+                void Linking.openURL(safeUrl).catch(() => setLinkError(m.openLinkFailed + safeUrl));
               }
             : undefined
         }
@@ -80,7 +82,7 @@ export function Markdown({
           key={key}
           horizontal
           style={{ backgroundColor: colors.surface1, borderRadius: 4, padding: 8 }}
-          accessibilityLabel="代码块"
+          accessibilityLabel={m.codeBlock}
         >
           <Text selectable style={[base, { fontFamily: codeFont, color: colors.foreground }]}>
             {node.text}
@@ -91,7 +93,7 @@ export function Markdown({
       return <View key={key} style={{ borderBottomWidth: 1, borderColor: colors.border }} />;
     if (node.type === "table")
       return (
-        <ScrollView key={key} horizontal accessibilityLabel="表格">
+        <ScrollView key={key} horizontal accessibilityLabel={m.table}>
           <View style={{ borderWidth: 1, borderColor: colors.border }}>
             {node.children.map((row, rowIndex) => (
               <View key={rowIndex} style={{ flexDirection: "row" }}>

@@ -21,6 +21,7 @@ paseo plugin install /Users/tky/Desktop/projects/paseo-thinking-translate
 
 ## 使用与设置
 
+- 界面语言跟随 Paseo 的 **Settings → General → Language**，支持 Paseo 的全部 9 种语言（`en`、`zh-CN`、`ja`、`ko`、`fr`、`es`、`pt-BR`、`ru`、`ar`）。桌面/Web 读取 Paseo 的应用语言设置，原生端回退系统语言；插件没有单独的语言开关。设置入口名保持品牌名 “Thinking Translate”。
 - 思考始终默认折叠，**点击展开后才开始翻译**；折叠状态不会发起翻译请求，长会话中未展开的思考不消耗接口配额。
 - 展开后手动折叠再展开会复用已有译文；切换“原文”时也不会发起新的翻译。
 - “原文”切换到源文本，“中文”切换回翻译视图。两种视图都解析 Markdown。
@@ -73,7 +74,7 @@ Markdown 标记、代码、链接地址、转义星号、缩进和列表层级�
 ## 开发与验证
 
 ```sh
-npm test -- server/service.test.ts shared/markdown.test.ts shared/contract.test.ts index.server.test.ts client/batch.test.ts
+npm test -- server/service.test.ts shared/markdown.test.ts shared/contract.test.ts shared/locale.test.ts index.server.test.ts client/batch.test.ts
 npm run typecheck
 npm run lint
 npm run format
@@ -85,7 +86,7 @@ npm run test:google
 
 `verify:host` 和 `test:browser` 默认读取相邻 `../paseo` checkout，也可用 `PASEO_CHECKOUT=/absolute/path/to/paseo` 指定已安装依赖的 Paseo 源码。浏览器脚本使用已安装的 Google Chrome。两者都通过宿主的真实插件编译器检查客户端和服务端导入边界；生成文件放在 `.artifacts/`。
 
-`verify:host` 在临时 home、随机端口验证实际安装、运行状态、设置、批量 RPC、去重、部分失败、重载和禁用。`test:browser` 将该编译产物载入 React Native Web 的测试宿主，使用真实本地 HTTP 翻译服务，检查折叠不发起翻译、展开后懒加载、流式复用、原文切换、失败重试、过期请求、Markdown、深浅主题、375px 布局、服务切换和设置校验，并生成截图。它不是完整 Paseo app 的端到端测试。
+`verify:host` 在临时 home、随机端口验证实际安装、运行状态、设置、批量 RPC、去重、部分失败、重载和禁用。`test:browser` 将该编译产物载入 React Native Web 的测试宿主，使用真实本地 HTTP 翻译服务，检查折叠不发起翻译、展开后懒加载、流式复用、原文切换、失败重试、过期请求、Markdown、深浅主题、375px 布局、服务切换、设置校验和 Paseo 界面语言跟随，并生成截图。它不是完整 Paseo app 的端到端测试。
 
 `test:google` 单独验证真实 Google 接口；外网可用性不是单元测试通过条件。客户端使用 React Native 组件，尚未完成 iOS / Android 真机和 Electron 包装器内的界面验证；原生选择、嵌套滚动和链接打开行为需要在对应设备上复核。
 

@@ -110,6 +110,9 @@ settings.values = {
 };
 const browser = await chromium.launch({ channel: "chrome", headless: true });
 const page = await browser.newPage({ viewport: { width: 1100, height: 850 } });
+await page.addInitScript(() => {
+  localStorage.setItem("@paseo:app-settings", JSON.stringify({ language: "zh-CN" }));
+});
 const errors = [];
 page.on("pageerror", (error) => errors.push(error.message));
 async function waitFor(condition) {
@@ -248,8 +251,25 @@ try {
     endpoint,
   );
   assert.deepEqual(errors, []);
+  const english = await browser.newPage({ viewport: { width: 1100, height: 850 } });
+  await english.addInitScript(() => {
+    localStorage.setItem("@paseo:app-settings", JSON.stringify({ language: "en" }));
+  });
+  await english.goto(`http://127.0.0.1:${server.address().port}`);
+  await english.getByRole("button", { name: "Show original", exact: true }).waitFor();
+  await english.evaluate(() => window.harness.update({ screen: "settings" }));
+  await english.getByText("Translation service", { exact: true }).waitFor();
+  await english.getByRole("textbox", { name: "Target language", exact: true }).waitFor();
+  await english
+    .getByRole("button", { name: "Translation service: Google keyless endpoint", exact: true })
+    .waitFor();
+  await english.evaluate(() => {
+    localStorage.setItem("@paseo:app-settings", JSON.stringify({ language: "ja" }));
+  });
+  await english.getByText("翻訳サービス", { exact: true }).waitFor();
+  await english.close();
   console.log(
-    "Browser integration passed: lazy translation, collapsed no-request, pending, streaming reuse, stale updates, retry, original toggle, collapse, Markdown, light/dark, 375px layout and settings validation/save/conflict/reload",
+    "Browser integration passed: lazy translation, collapsed no-request, pending, streaming reuse, stale updates, retry, original toggle, collapse, Markdown, light/dark, 375px layout, settings validation/save/conflict/reload and Paseo-language following",
   );
 } finally {
   translator.dispose();
