@@ -21,10 +21,11 @@ paseo plugin install /Users/tky/Desktop/projects/paseo-thinking-translate
 
 ## 使用与设置
 
-- 思考生成时默认展开，完成后默认折叠。手动展开或折叠后，后续流式更新和完成状态尊重你的选择。
+- 思考始终默认折叠，**点击展开后才开始翻译**；折叠状态不会发起翻译请求，长会话中未展开的思考不消耗接口配额。
+- 展开后手动折叠再展开会复用已有译文；切换“原文”时也不会发起新的翻译。
 - “原文”切换到源文本，“中文”切换回翻译视图。两种视图都解析 Markdown。
 - 翻译尚未返回时显示原文。部分失败只保留失败部分的原文，并提供错误原因和“重试”；成功部分继续显示译文。
-- 流式内容只翻译已闭合的块；还在增长的尾部显示原文，完成后才翻译。
+- 流式内容在展开状态下只翻译已闭合的块；还在增长的尾部显示原文，完成后才翻译。
 
 在插件的 **Thinking 翻译** 设置页可修改宿主级设置，支持三种服务：
 
@@ -49,7 +50,7 @@ paseo plugin install /Users/tky/Desktop/projects/paseo-thinking-translate
 
 ## 数据发送与接口限制
 
-翻译请求由 **daemon** 发起，手机、浏览器和 relay 客户端通过 Paseo 插件 RPC 调用，不直接请求翻译服务。展开与否不影响自动翻译：已挂载的思考行会在启用时自动处理。
+翻译请求由 **daemon** 发起，手机、浏览器和 relay 客户端通过 Paseo 插件 RPC 调用，不直接请求翻译服务。只有你展开的思考行会发起翻译；折叠后不会开始新的翻译请求，流式更新也只在展开时处理。
 
 思考中的自然语言片段会发送至所选服务：
 
@@ -84,7 +85,7 @@ npm run test:google
 
 `verify:host` 和 `test:browser` 默认读取相邻 `../paseo` checkout，也可用 `PASEO_CHECKOUT=/absolute/path/to/paseo` 指定已安装依赖的 Paseo 源码。浏览器脚本使用已安装的 Google Chrome。两者都通过宿主的真实插件编译器检查客户端和服务端导入边界；生成文件放在 `.artifacts/`。
 
-`verify:host` 在临时 home、随机端口验证实际安装、运行状态、设置、批量 RPC、去重、部分失败、重载和禁用。`test:browser` 将该编译产物载入 React Native Web 的测试宿主，使用真实本地 HTTP 翻译服务，检查流式复用、原文切换、折叠、失败重试、过期请求、Markdown、深浅主题、375px 布局、服务切换和设置校验，并生成截图。它不是完整 Paseo app 的端到端测试。
+`verify:host` 在临时 home、随机端口验证实际安装、运行状态、设置、批量 RPC、去重、部分失败、重载和禁用。`test:browser` 将该编译产物载入 React Native Web 的测试宿主，使用真实本地 HTTP 翻译服务，检查折叠不发起翻译、展开后懒加载、流式复用、原文切换、失败重试、过期请求、Markdown、深浅主题、375px 布局、服务切换和设置校验，并生成截图。它不是完整 Paseo app 的端到端测试。
 
 `test:google` 单独验证真实 Google 接口；外网可用性不是单元测试通过条件。客户端使用 React Native 组件，尚未完成 iOS / Android 真机和 Electron 包装器内的界面验证；原生选择、嵌套滚动和链接打开行为需要在对应设备上复核。
 

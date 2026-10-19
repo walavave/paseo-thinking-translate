@@ -28,9 +28,11 @@ export function Thinking({ item, theme, layout }: PluginTimelineItemProps<Reason
   const texts = useMemo(() => translationTexts(nodes), [nodes]);
   const [manualExpanded, setManualExpanded] = useState<boolean | null>(null);
   const [original, setOriginal] = useState(false);
-  const expanded = manualExpanded ?? phase === "streaming";
+  // Translation is lazy: a collapsed thought never sends its text anywhere.
+  const expanded = manualExpanded ?? false;
   const values = preferences.status === "ready" ? preferences.values : null;
   const enabled = values?.enabled === true;
+  const translating = enabled && expanded && !original;
   const translationLabel = /^zh(?:-|$)/i.test(values?.targetLanguage ?? "zh-CN") ? "中文" : "译文";
   const queries = useQueries({
     queries: texts.map((source) => ({
@@ -45,7 +47,7 @@ export function Thinking({ item, theme, layout }: PluginTimelineItemProps<Reason
         source,
       ],
       queryFn: () => batch(source),
-      enabled,
+      enabled: translating,
       staleTime: Infinity,
       gcTime: 10 * 60 * 1000,
       retry: false,
@@ -88,7 +90,7 @@ export function Thinking({ item, theme, layout }: PluginTimelineItemProps<Reason
             {original ? translationLabel : "原文"}
           </Text>
         </Pressable>
-        {enabled && pending ? <Text style={label}>翻译中…</Text> : null}
+        {enabled && expanded && pending ? <Text style={label}>翻译中…</Text> : null}
         {!enabled && preferences.status === "ready" ? (
           <Text style={label}>自动翻译已关闭</Text>
         ) : null}
@@ -101,7 +103,7 @@ export function Thinking({ item, theme, layout }: PluginTimelineItemProps<Reason
           compact={layout.compact}
         />
       ) : null}
-      {enabled && errors.size ? (
+      {enabled && expanded && errors.size ? (
         <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
           <Text accessibilityRole="alert" style={[label, { color: colors.statusWarning }]}>
             {Array.from(errors).join("；")}，失败部分显示原文。

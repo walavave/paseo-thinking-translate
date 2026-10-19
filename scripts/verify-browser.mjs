@@ -125,6 +125,11 @@ async function visible(text) {
 }
 try {
   await page.goto(`http://127.0.0.1:${server.address().port}`);
+  await page.getByRole("button", { name: "Thinking", exact: true }).waitFor();
+  await page.waitForTimeout(100);
+  assert.equal(counts.size, 0, "collapsed thinking must not request translations");
+  assert.equal(await markdown.count(), 0);
+  await page.getByRole("button", { name: "Thinking", exact: true }).click();
   await page.getByText("翻译中…").waitFor();
   await visible("First");
   await waitFor(() => held.size === 2);
@@ -151,8 +156,6 @@ try {
   await visible("Tail **still growing");
   assert.equal(counts.get("First"), 1);
   await page.evaluate(() => window.harness.update({ phase: "complete" }));
-  await markdown.waitFor({ state: "detached" });
-  await page.getByRole("button", { name: "Thinking", exact: true }).click();
   await visible("译文:Tail **still growing");
   await page.evaluate(() => window.harness.update({ text: "Broken\n\nFine", phase: "streaming" }));
   await page.getByRole("button", { name: "重试翻译", exact: true }).waitFor();
@@ -202,13 +205,15 @@ try {
   });
   await page.getByRole("button", { name: "Thinking", exact: true }).click();
   await markdown.waitFor({ state: "detached" });
-  await page.evaluate(() => window.harness.update({ phase: "streaming" }));
-  await markdown.waitFor({ state: "detached" });
+  await page.evaluate(() => window.harness.update({ text: "Collapsed only", phase: "complete" }));
+  await page.waitForTimeout(100);
+  assert.equal(counts.has("Collapsed only"), false);
   await page.getByRole("button", { name: "Thinking", exact: true }).click();
   await markdown.waitFor();
+  await visible("译文:Collapsed only");
   await page.evaluate(() => window.harness.settings({ enabled: false }));
   await page.getByText("自动翻译已关闭").waitFor();
-  await visible("Heading");
+  await visible("Collapsed only");
   assert.doesNotMatch(await markdown.innerText(), /译文:/);
   await page.evaluate(() => window.harness.update({ screen: "settings", dark: false }));
   await page.getByRole("button", { name: "翻译服务: 微软翻译", exact: true }).click();
@@ -244,7 +249,7 @@ try {
   );
   assert.deepEqual(errors, []);
   console.log(
-    "Browser integration passed: pending, streaming reuse, stale updates, retry, original toggle, collapse, Markdown, light/dark, 375px layout and settings validation/save/conflict/reload",
+    "Browser integration passed: lazy translation, collapsed no-request, pending, streaming reuse, stale updates, retry, original toggle, collapse, Markdown, light/dark, 375px layout and settings validation/save/conflict/reload",
   );
 } finally {
   translator.dispose();
