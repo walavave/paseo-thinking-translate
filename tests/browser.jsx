@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useSyncExternalStore } from "react";
+import React, { useCallback, useContext, useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import * as native from "react-native-web";
 import * as query from "@tanstack/react-query";
@@ -32,6 +32,80 @@ const dark = {
   statusWarning: "#e1bb69",
   statusDanger: "#ff9393",
 };
+const ThemeContext = React.createContext(light);
+
+// Match the host's row alignment and control geometry: expanding a menu must not resize a row.
+function SettingsRow({ label, hint, children, testID }) {
+  const colors = useContext(ThemeContext);
+  const { width } = native.useWindowDimensions();
+  return (
+    <native.View
+      testID={testID}
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: 16,
+        ...(width < 768 ? { flexWrap: "wrap", gap: 12 } : {}),
+      }}
+    >
+      <native.View style={{ flexGrow: 1, flexShrink: 1, flexBasis: 160, marginRight: 12 }}>
+        <native.Text style={{ color: colors.foreground, fontSize: 14 }}>{label}</native.Text>
+        {hint ? (
+          <native.Text style={{ color: colors.foregroundMuted, fontSize: 12, marginTop: 4 }}>
+            {hint}
+          </native.Text>
+        ) : null}
+      </native.View>
+      <native.View style={{ flexShrink: 1, maxWidth: "100%" }}>{children}</native.View>
+    </native.View>
+  );
+}
+
+function SettingsSelect({ label, value, options, onValueChange, disabled }) {
+  const [open, setOpen] = useState(false);
+  const colors = useContext(ThemeContext);
+  const selected = options.find((option) => option.value === value)?.label ?? value;
+  return (
+    <SettingsRow label={label}>
+      <native.Pressable
+        testID={`settings-select-${label}`}
+        accessibilityRole="button"
+        accessibilityLabel={`${label}: ${selected}`}
+        disabled={disabled}
+        onPress={() => setOpen((current) => !current)}
+        style={{
+          minHeight: 32,
+          paddingHorizontal: 12,
+          borderRadius: 12,
+          borderWidth: 1,
+          borderColor: colors.border,
+          justifyContent: "center",
+        }}
+      >
+        <native.Text style={{ color: colors.foreground, fontSize: 14 }}>
+          {selected} {"\u2304"}
+        </native.Text>
+      </native.Pressable>
+      {open
+        ? options.map((option) => (
+            <native.Pressable
+              key={option.value}
+              accessibilityRole="button"
+              accessibilityLabel={`${label}: ${option.label}`}
+              onPress={() => {
+                onValueChange(option.value);
+                setOpen(false);
+              }}
+            >
+              <native.Text>{option.label}</native.Text>
+            </native.Pressable>
+          ))
+        : null}
+    </SettingsRow>
+  );
+}
+
 let snapshot = {
   status: "ready",
   revision: "initial",
@@ -107,65 +181,81 @@ const modules = {
   "@getpaseo/plugin": sdk,
   "@getpaseo/plugin/client": { useSettings, useRpc },
   "@getpaseo/plugin/client/ui": {
-    SettingsRow: ({ label, hint, children }) => (
-      <native.View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-        <native.View style={{ flexGrow: 1, flexShrink: 1, flexBasis: 160 }}>
-          <native.Text>{label}</native.Text>
-          <native.Text>{hint}</native.Text>
+    SettingsRow,
+    SettingsSection: ({ title, info, children }) => {
+      const colors = useContext(ThemeContext);
+      return (
+        <native.View style={{ gap: 12, marginBottom: 24 }}>
+          <native.View style={{ flexDirection: "row", gap: 8, marginLeft: 4 }}>
+            <native.Text style={{ color: colors.foregroundMuted, fontSize: 12 }}>
+              {title}
+            </native.Text>
+            <native.Text accessibilityLabel={info} style={{ color: colors.foregroundMuted }}>
+              {"\u24d8"}
+            </native.Text>
+          </native.View>
+          {children}
         </native.View>
-        <native.View style={{ flexShrink: 1, maxWidth: "100%" }}>{children}</native.View>
-      </native.View>
-    ),
-    SettingsSection: ({ title, info, children }) => (
-      <native.View style={{ gap: 12 }}>
-        <native.Text>{title}</native.Text>
-        <native.Text>{info}</native.Text>
-        {children}
-      </native.View>
-    ),
-    SettingsInput: ({ label, initialValue, onChangeText, disabled }) => (
-      <native.TextInput
-        accessibilityLabel={label}
-        defaultValue={initialValue}
-        onChangeText={onChangeText}
-        editable={!disabled}
-      />
-    ),
+      );
+    },
+    SettingsInput: ({ label, initialValue, onChangeText, disabled }) => {
+      const colors = useContext(ThemeContext);
+      return (
+        <SettingsRow label={label}>
+          <native.TextInput
+            accessibilityLabel={label}
+            defaultValue={initialValue}
+            onChangeText={onChangeText}
+            editable={!disabled}
+            style={{
+              color: colors.foreground,
+              borderColor: colors.border,
+              borderWidth: 1,
+              borderRadius: 6,
+              paddingHorizontal: 12,
+              minWidth: 180,
+              height: 32,
+            }}
+          />
+        </SettingsRow>
+      );
+    },
     SettingsSwitch: ({ label, value, onValueChange, disabled }) => (
-      <native.Switch
-        accessibilityLabel={label}
-        value={value}
-        onValueChange={onValueChange}
-        disabled={disabled}
-      />
+      <SettingsRow label={label}>
+        <native.Switch
+          accessibilityLabel={label}
+          value={value}
+          onValueChange={onValueChange}
+          disabled={disabled}
+        />
+      </SettingsRow>
     ),
-    SettingsSelect: ({ label, value, options, onValueChange, disabled }) => (
-      <native.View>
-        <native.Text>{label}</native.Text>
-        {options.map((option) => (
+    SettingsSelect,
+    SettingsAction: ({ label, actionLabel, onPress, disabled }) => {
+      const colors = useContext(ThemeContext);
+      return (
+        <SettingsRow label={label}>
           <native.Pressable
-            key={option.value}
             accessibilityRole="button"
-            accessibilityLabel={`${label}: ${option.label}`}
-            accessibilityState={{ selected: value === option.value }}
+            accessibilityLabel={actionLabel}
+            onPress={onPress}
             disabled={disabled}
-            onPress={() => onValueChange(option.value)}
+            style={{
+              borderWidth: 1,
+              borderColor: colors.border,
+              borderRadius: 12,
+              minHeight: 32,
+              paddingHorizontal: 12,
+              justifyContent: "center",
+            }}
           >
-            <native.Text>{option.label}</native.Text>
+            <native.Text style={{ color: colors.foreground, fontSize: 14 }}>
+              {actionLabel}
+            </native.Text>
           </native.Pressable>
-        ))}
-      </native.View>
-    ),
-    SettingsAction: ({ actionLabel, onPress, disabled }) => (
-      <native.Pressable
-        accessibilityRole="button"
-        accessibilityLabel={actionLabel}
-        onPress={onPress}
-        disabled={disabled}
-      >
-        <native.Text>{actionLabel}</native.Text>
-      </native.Pressable>
-    ),
+        </SettingsRow>
+      );
+    },
   },
 };
 const text = await (await fetch("/plugin.cjs")).text();
@@ -215,13 +305,15 @@ function App() {
   const Settings = settingsScreen;
   if (state.screen === "settings")
     return (
-      <native.View style={{ height: "100vh" }}>
-        <Settings
-          theme={{ colors }}
-          layout={{ platform: "web", compact: state.compact }}
-          host={{ id: "test", label: "Test host" }}
-        />
-      </native.View>
+      <ThemeContext.Provider value={colors}>
+        <native.View style={{ height: "100vh" }}>
+          <Settings
+            theme={{ colors }}
+            layout={{ platform: "web", compact: state.compact }}
+            host={{ id: "test", label: "Test host" }}
+          />
+        </native.View>
+      </ThemeContext.Provider>
     );
   return (
     <native.View style={{ padding: state.compact ? 16 : 32, maxWidth: 840, width: "100%" }}>

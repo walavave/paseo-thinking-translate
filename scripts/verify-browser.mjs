@@ -219,15 +219,19 @@ try {
   await visible("Collapsed only");
   assert.doesNotMatch(await markdown.innerText(), /译文:/);
   await page.evaluate(() => window.harness.update({ screen: "settings", dark: false }));
+  await page.getByTestId("settings-select-翻译服务").click();
   await page.getByRole("button", { name: "翻译服务: 微软翻译", exact: true }).click();
   await page.getByRole("textbox", { name: "微软 API Key", exact: true }).waitFor();
   await page.getByRole("textbox", { name: "微软区域", exact: true }).waitFor();
+  await page.getByTestId("settings-select-翻译服务").click();
   await page.getByRole("button", { name: "翻译服务: Google Cloud", exact: true }).click();
+  await page.getByTestId("settings-select-Google API 版本").click();
   await page
     .getByRole("button", { name: "Google API 版本: v3（OAuth Access Token）", exact: true })
     .click();
   await page.getByRole("textbox", { name: "OAuth Access Token", exact: true }).waitFor();
   await page.getByRole("textbox", { name: "Google Cloud 项目 ID", exact: true }).waitFor();
+  await page.getByTestId("settings-select-翻译服务").click();
   await page.getByRole("button", { name: "翻译服务: Google 免费接口", exact: true }).click();
   await page.getByRole("textbox", { name: "Endpoint", exact: true }).waitFor();
   await page.getByRole("textbox", { name: "Endpoint", exact: true }).fill("invalid");
@@ -250,10 +254,42 @@ try {
         (dark) => window.harness.update({ dark, compact: window.innerWidth < 600 }),
         dark,
       );
+      const settingsScroll = page.getByTestId("translation-settings");
+      await settingsScroll.evaluate((element) => {
+        element.scrollTop = 0;
+      });
       const trigger = page.getByTestId("target-language-trigger");
+      await trigger.scrollIntoViewIfNeeded();
+      const row = page.getByTestId("target-language-row");
+      const rowBefore = await row.boundingBox();
+      const endpointBefore = await page
+        .getByRole("textbox", { name: "Endpoint", exact: true })
+        .boundingBox();
+      const contentHeightBefore = await settingsScroll.evaluate((element) => element.scrollHeight);
       await trigger.click();
+      await languageList.waitFor();
       assert.equal(await trigger.getAttribute("aria-expanded"), "true");
-      await languageList.evaluate((element) => element.scrollIntoView({ block: "center" }));
+      await page.waitForFunction(() => document.activeElement?.getAttribute("role") === "menuitem");
+      assert.deepEqual(
+        await row.boundingBox(),
+        rowBefore,
+        "opening a menu must not resize or move its row",
+      );
+      assert.deepEqual(
+        await page.getByRole("textbox", { name: "Endpoint", exact: true }).boundingBox(),
+        endpointBefore,
+        "opening a menu must not push the following settings down",
+      );
+      assert.equal(
+        await settingsScroll.evaluate((element) => element.scrollHeight),
+        contentHeightBefore,
+        "floating menu must not increase the settings page height",
+      );
+      assert.equal(
+        (await trigger.boundingBox()).height,
+        32,
+        "trigger matches the host's compact control height",
+      );
       const dimensions = await languageList.evaluate((element) => ({
         height: element.clientHeight,
         content: element.scrollHeight,
@@ -269,7 +305,23 @@ try {
         dimensions.bounds.y >= 0 && dimensions.bounds.bottom <= viewport.height,
         `language list must fit viewport: ${JSON.stringify({ viewport, dimensions })}`,
       );
-      const last = languageList.getByRole("button").last();
+      const triggerBounds = await trigger.boundingBox();
+      assert.ok(
+        Math.abs(dimensions.bounds.right - (triggerBounds.x + triggerBounds.width)) <= 2,
+        "floating menu must align to the right edge of its trigger",
+      );
+      if (viewport.height === 420) {
+        assert.ok(
+          dimensions.bounds.bottom < triggerBounds.y,
+          "menu must open above its trigger when there is more room above",
+        );
+      } else {
+        assert.ok(
+          dimensions.bounds.y > triggerBounds.y + triggerBounds.height,
+          "menu must open below its trigger when space permits",
+        );
+      }
+      const last = languageList.getByRole("menuitem").last();
       assert.equal(await last.getAttribute("aria-label"), "目标语言: 其他语言…");
       const before = await last.boundingBox();
       assert.ok(before.y >= dimensions.bounds.bottom, "bottom option initially needs scrolling");
@@ -305,16 +357,17 @@ try {
         await page.waitForFunction((element) => !element.isConnected, previousInput);
         assert.equal(await input.inputValue(), "sr-Latn");
       } else {
-        const bottomLanguage = languageList.getByRole("button").nth(-2);
+        const bottomLanguage = languageList.getByRole("menuitem").nth(-2);
         await bottomLanguage.click();
         await languageList.waitFor({ state: "detached" });
         await page.getByRole("button", { name: "保存", exact: true }).click();
         await page.getByText("设置已保存").waitFor();
         assert.equal(settings.values.targetLanguage, "vi");
         await page.getByRole("button", { name: "目标语言: 越南语", exact: true }).click();
-        await languageList.getByRole("button", { name: "目标语言: 简体中文", exact: true }).click();
+        await languageList
+          .getByRole("menuitem", { name: "目标语言: 简体中文", exact: true })
+          .click();
       }
-      const settingsScroll = page.getByTestId("translation-settings");
       await page.getByRole("button", { name: "重新读取", exact: true }).scrollIntoViewIfNeeded();
       if (viewport.height === 420) {
         assert.ok(
@@ -327,17 +380,43 @@ try {
   await page.setViewportSize({ width: 1100, height: 850 });
   await page.evaluate(() => window.harness.update({ dark: false, compact: false }));
   await page.getByRole("button", { name: "目标语言: 其他语言…", exact: true }).click();
-  await languageList.getByRole("button", { name: "目标语言: 法语", exact: true }).click();
+  await languageList.getByRole("menuitem", { name: "目标语言: 法语", exact: true }).click();
   await languageList.waitFor({ state: "detached" });
   const frenchTrigger = page.getByTestId("target-language-trigger");
   assert.equal(await frenchTrigger.evaluate((element) => element === document.activeElement), true);
   await frenchTrigger.press("Enter");
+  await languageList.waitFor();
   assert.equal(await frenchTrigger.getAttribute("aria-expanded"), "true");
-  await languageList.getByRole("button", { name: "目标语言: 法语", exact: true }).focus();
+  await languageList.getByRole("menuitem", { name: "目标语言: 法语", exact: true }).focus();
   await page.keyboard.press("Enter");
   await languageList.waitFor({ state: "detached" });
   await frenchTrigger.click();
+  await languageList.waitFor();
+  await page.keyboard.press("End");
+  assert.equal(
+    await languageList
+      .getByRole("menuitem")
+      .last()
+      .evaluate((element) => element === document.activeElement),
+    true,
+  );
+  await page.keyboard.press("Home");
+  await page.keyboard.press("ArrowDown");
+  assert.equal(
+    await languageList
+      .getByRole("menuitem")
+      .nth(1)
+      .evaluate((element) => element === document.activeElement),
+    true,
+  );
+  await page.keyboard.press("Escape");
+  await languageList.waitFor({ state: "detached" });
   await frenchTrigger.click();
+  await page.getByTestId("target-language-backdrop").click({ position: { x: 1, y: 1 } });
+  await languageList.waitFor({ state: "detached" });
+  await frenchTrigger.click();
+  await languageList.waitFor();
+  await page.setViewportSize({ width: 1000, height: 650 });
   await languageList.waitFor({ state: "detached" });
   let releaseSave;
   await page.route("**/settings", async (route) => {
@@ -385,7 +464,7 @@ try {
   await english.getByText("翻訳サービス", { exact: true }).waitFor();
   await english.close();
   console.log(
-    "Browser integration passed: lazy translation, collapsed no-request, pending, streaming reuse, stale updates, retry, original toggle, collapse, Markdown, light/dark, 375px layout, language-list wheel scrolling and bottom selection, short viewports, keyboard selection, custom-language persistence, settings validation/save/conflict/reload and Paseo-language following",
+    "Browser integration passed: lazy translation, collapsed no-request, pending, streaming reuse, stale updates, retry, original toggle, collapse, Markdown, light/dark, 375px layout, floating language menu without layout shifts, above/below placement, wheel scrolling and bottom selection, keyboard navigation, Escape/outside dismissal, resize dismissal, custom-language persistence, settings validation/save/conflict/reload and Paseo-language following",
   );
 } finally {
   translator.dispose();

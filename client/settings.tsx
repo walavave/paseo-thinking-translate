@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState } from "react";
-import { Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Modal, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 import { useSettings, type PluginSurfaceProps, type SettingsState } from "@getpaseo/plugin/client";
 import {
   SettingsAction,
@@ -41,85 +41,221 @@ function LanguageSelect({
   theme: PluginSurfaceProps["theme"];
   onValueChange(value: string): void;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [anchor, setAnchor] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
   const trigger = useRef<View>(null);
-  const { height } = useWindowDimensions();
+  const optionRefs = useRef(new Map<string, View>());
+  const focusedIndex = useRef(0);
+  const { width, height } = useWindowDimensions();
   const { colors } = theme;
   const selectedLabel = options.find((option) => option.value === value)?.label ?? value;
+  const expanded = anchor !== null && !disabled;
+  useEffect(() => {
+    setAnchor(null);
+  }, [width, height, disabled]);
+
+  function close() {
+    setAnchor(null);
+    trigger.current?.focus();
+  }
+
+  // The menu lives outside the settings ScrollView, so it cannot resize or be clipped by a row.
+  const menuWidth = Math.min(220, width - 16);
+  const below = anchor ? Math.max(0, height - anchor.y - anchor.height - 12) : 0;
+  const above = anchor ? Math.max(0, anchor.y - 12) : 0;
+  const opensAbove = below < Math.min(320, height * 0.4) && above > below;
+  const menuHeight = Math.min(320, height * 0.4, opensAbove ? above : below);
+  const left = anchor
+    ? Math.max(8, Math.min(width - menuWidth - 8, anchor.x + anchor.width - menuWidth))
+    : 8;
+  const top = anchor ? (opensAbove ? anchor.y - menuHeight - 4 : anchor.y + anchor.height + 4) : 8;
+
+  function focusOption(index: number) {
+    focusedIndex.current = Math.max(0, Math.min(options.length - 1, index));
+    optionRefs.current.get(options[focusedIndex.current].value)?.focus();
+  }
+
+  const keyboardHandlers = {
+    onKeyDown(event: { nativeEvent: { key: string }; preventDefault(): void }) {
+      switch (event.nativeEvent.key) {
+        case "ArrowDown":
+          event.preventDefault();
+          focusOption(focusedIndex.current + 1);
+          break;
+        case "ArrowUp":
+          event.preventDefault();
+          focusOption(focusedIndex.current - 1);
+          break;
+        case "Home":
+          event.preventDefault();
+          focusOption(0);
+          break;
+        case "End":
+          event.preventDefault();
+          focusOption(options.length - 1);
+          break;
+      }
+    },
+  };
   return (
-    <SettingsRow label={label} hint={hint}>
-      <View style={{ width: 220, maxWidth: "100%", gap: 4 }}>
+    <SettingsRow label={label} hint={hint} testID="target-language-row">
+      <View style={{ maxWidth: "100%" }}>
         <Pressable
           ref={trigger}
           testID="target-language-trigger"
           accessibilityRole="button"
           accessibilityLabel={`${label}: ${selectedLabel}`}
           accessibilityState={{ expanded: expanded && !disabled, disabled }}
-          aria-expanded={expanded && !disabled}
+          aria-expanded={expanded}
+          aria-haspopup="menu"
           disabled={disabled}
-          onPress={() => setExpanded((current) => !current)}
+          onPress={() => {
+            if (expanded) {
+              close();
+              return;
+            }
+            trigger.current?.measureInWindow((x, y, width, height) => {
+              setAnchor({ x, y, width, height });
+            });
+          }}
           style={({ pressed }) => ({
             flexDirection: "row",
             alignItems: "center",
-            justifyContent: "space-between",
             gap: 8,
+            minHeight: 32,
             paddingHorizontal: 12,
-            paddingVertical: 8,
             borderWidth: 1,
-            borderRadius: 6,
+            borderRadius: 12,
             borderColor: colors.border,
-            backgroundColor: pressed ? colors.surface2 : colors.surface0,
+            backgroundColor: pressed ? colors.surface2 : "transparent",
             opacity: disabled ? 0.5 : 1,
           })}
         >
-          <Text style={{ color: colors.foreground, flexShrink: 1 }}>{selectedLabel}</Text>
-          <Text style={{ color: colors.foregroundMuted }}>{expanded ? "\u2303" : "\u2304"}</Text>
+          <Text numberOfLines={1} style={{ color: colors.foreground, fontSize: 14, flexShrink: 1 }}>
+            {selectedLabel}
+          </Text>
+          <View style={{ width: 16, height: 16, alignItems: "center", justifyContent: "center" }}>
+            <View
+              style={{
+                width: 7,
+                height: 7,
+                borderRightWidth: 1.5,
+                borderBottomWidth: 1.5,
+                borderColor: colors.foregroundMuted,
+                transform: [{ translateY: -2 }, { rotate: "45deg" }],
+              }}
+            />
+          </View>
         </Pressable>
-        {expanded && !disabled ? (
-          <ScrollView
-            testID="target-language-options"
-            accessibilityLabel={label}
-            nestedScrollEnabled
-            showsVerticalScrollIndicator
-            keyboardShouldPersistTaps="handled"
-            style={{
-              maxHeight: Math.min(320, height * 0.4),
-              borderWidth: 1,
-              borderRadius: 6,
-              borderColor: colors.border,
-              backgroundColor: colors.surface1,
-            }}
+        {expanded ? (
+          <Modal
+            transparent
+            visible
+            animationType="none"
+            onRequestClose={close}
+            onShow={() =>
+              focusOption(
+                Math.max(
+                  0,
+                  options.findIndex((option) => option.value === value),
+                ),
+              )
+            }
           >
-            {options.map((option) => (
-              <Pressable
-                key={option.value}
-                accessibilityRole="button"
-                accessibilityLabel={`${label}: ${option.label}`}
-                accessibilityState={{ selected: option.value === value }}
-                aria-selected={option.value === value}
-                onPress={() => {
-                  onValueChange(option.value);
-                  setExpanded(false);
-                  trigger.current?.focus();
-                }}
-                style={({ pressed }) => ({
-                  paddingHorizontal: 12,
-                  paddingVertical: 10,
-                  backgroundColor:
-                    pressed || option.value === value ? colors.surface2 : colors.surface1,
-                })}
+            <Pressable
+              testID="target-language-backdrop"
+              accessible={false}
+              onPress={close}
+              style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0 }}
+            />
+            <View
+              {...keyboardHandlers}
+              style={{
+                position: "absolute",
+                top,
+                left,
+                width: menuWidth,
+                height: menuHeight,
+                borderWidth: 1,
+                borderRadius: 8,
+                borderColor: colors.border,
+                backgroundColor: colors.surface1,
+                overflow: "hidden",
+                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12)",
+              }}
+            >
+              <ScrollView
+                testID="target-language-options"
+                accessibilityRole="menu"
+                accessibilityLabel={label}
+                nestedScrollEnabled
+                showsVerticalScrollIndicator
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={{ paddingVertical: 4 }}
+                style={{ flex: 1 }}
               >
-                <Text
-                  style={{
-                    color: option.value === value ? colors.accent : colors.foreground,
-                    fontWeight: option.value === value ? "600" : "400",
-                  }}
-                >
-                  {option.label}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
+                {options.map((option, index) => (
+                  <Pressable
+                    key={option.value}
+                    ref={(view) => {
+                      if (view) optionRefs.current.set(option.value, view);
+                      else optionRefs.current.delete(option.value);
+                    }}
+                    accessibilityRole="menuitem"
+                    accessibilityLabel={`${label}: ${option.label}`}
+                    accessibilityState={{ selected: option.value === value }}
+                    aria-selected={option.value === value}
+                    onFocus={() => {
+                      focusedIndex.current = index;
+                    }}
+                    onPress={() => {
+                      onValueChange(option.value);
+                      close();
+                    }}
+                    style={({
+                      pressed,
+                      hovered = false,
+                      focused = false,
+                    }: {
+                      pressed: boolean;
+                      hovered?: boolean;
+                      focused?: boolean;
+                    }) => ({
+                      flexDirection: "row",
+                      alignItems: "center",
+                      minHeight: width < 768 ? 40 : 28,
+                      marginHorizontal: 4,
+                      paddingHorizontal: 8,
+                      paddingVertical: 4,
+                      borderWidth: 1,
+                      borderColor: "transparent",
+                      borderRadius: 6,
+                      gap: 8,
+                      backgroundColor:
+                        pressed || hovered || focused || option.value === value
+                          ? colors.surface2
+                          : "transparent",
+                    })}
+                  >
+                    <Text
+                      style={{ color: colors.foreground, fontSize: 14, lineHeight: 18, flex: 1 }}
+                    >
+                      {option.label}
+                    </Text>
+                    {option.value === value ? (
+                      <Text style={{ color: colors.foregroundMuted, fontSize: 14 }}>
+                        {"\u2713"}
+                      </Text>
+                    ) : null}
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+          </Modal>
         ) : null}
       </View>
     </SettingsRow>
