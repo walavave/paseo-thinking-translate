@@ -12,6 +12,9 @@ export interface Messages {
   serviceMicrosoft: string;
   targetLanguage: string;
   targetLanguageHint: string;
+  customLanguage: string;
+  customLanguageHint: string;
+  errorTargetLanguage: string;
   endpoint: string;
   freeEndpointHint: string;
   googleVersion: string;
@@ -48,12 +51,9 @@ export interface Messages {
   errorEndpoint: string;
   errorInvalid: string;
   original: string;
-  chinese: string;
-  translation: string;
   showOriginal: string;
-  showChinese: string;
-  showTranslation: string;
-  translating: string;
+  showLanguage: string;
+  translatingTo: string;
   autoDisabled: string;
   retryTranslation: string;
   failuresSuffix: string;
@@ -77,6 +77,9 @@ const en: Messages = {
   serviceMicrosoft: "Microsoft Translator",
   targetLanguage: "Target language",
   targetLanguageHint: "Use zh-CN / zh-TW for Google; Microsoft maps them to zh-Hans / zh-Hant.",
+  customLanguage: "Other language…",
+  customLanguageHint: "Enter a Google or Microsoft language code, e.g. sr-Latn.",
+  errorTargetLanguage: "Enter a valid language code.",
   endpoint: "Endpoint",
   freeEndpointHint: "Keyless endpoint returning Google translate_a/t JSON.",
   googleVersion: "Google API version",
@@ -116,12 +119,9 @@ const en: Messages = {
   errorEndpoint: "Enter a valid target language and HTTP(S) endpoint.",
   errorInvalid: "Invalid settings.",
   original: "Original",
-  chinese: "Chinese",
-  translation: "Translation",
   showOriginal: "Show original",
-  showChinese: "Show Chinese",
-  showTranslation: "Show translation",
-  translating: "Translating…",
+  showLanguage: "Show {language}",
+  translatingTo: "Translating to {language}…",
   autoDisabled: "Automatic translation is off",
   retryTranslation: "Retry translation",
   failuresSuffix: "; failed parts show the original.",
@@ -155,6 +155,9 @@ const zhCN: Messages = {
   serviceMicrosoft: "微软翻译",
   targetLanguage: "目标语言",
   targetLanguageHint: "Google 使用 zh-CN / zh-TW；微软会自动转换为 zh-Hans / zh-Hant。",
+  customLanguage: "其他语言…",
+  customLanguageHint: "输入 Google 或微软的语言代码，例如 sr-Latn。",
+  errorTargetLanguage: "请输入有效的语言代码。",
   endpoint: "Endpoint",
   freeEndpointHint: "免 key 接口，返回 Google translate_a/t 的 JSON 结构。",
   googleVersion: "Google API 版本",
@@ -191,12 +194,9 @@ const zhCN: Messages = {
   errorEndpoint: "请填写有效的目标语言和 HTTP(S) endpoint。",
   errorInvalid: "设置无效。",
   original: "原文",
-  chinese: "中文",
-  translation: "译文",
   showOriginal: "显示原文",
-  showChinese: "显示中文",
-  showTranslation: "显示译文",
-  translating: "翻译中…",
+  showLanguage: "显示{language}",
+  translatingTo: "正在翻译为{language}…",
   autoDisabled: "自动翻译已关闭",
   retryTranslation: "重试翻译",
   failuresSuffix: "，失败部分显示原文。",
@@ -231,6 +231,9 @@ const ja: Messages = {
   targetLanguage: "対象言語",
   targetLanguageHint:
     "Google では zh-CN / zh-TW を使用します。Microsoft では zh-Hans / zh-Hant に自動変換されます。",
+  customLanguage: "その他の言語…",
+  customLanguageHint: "Google または Microsoft の言語コードを入力（例: sr-Latn）。",
+  errorTargetLanguage: "有効な言語コードを入力してください。",
   endpoint: "エンドポイント",
   freeEndpointHint: "Google translate_a/t の JSON を返すキー不要エンドポイント。",
   googleVersion: "Google API バージョン",
@@ -269,12 +272,9 @@ const ja: Messages = {
   errorEndpoint: "有効な対象言語と HTTP(S) エンドポイントを入力してください。",
   errorInvalid: "設定が無効です。",
   original: "原文",
-  chinese: "中国語",
-  translation: "翻訳",
   showOriginal: "原文を表示",
-  showChinese: "中国語を表示",
-  showTranslation: "翻訳を表示",
-  translating: "翻訳中…",
+  showLanguage: "{language}を表示",
+  translatingTo: "{language}に翻訳中…",
   autoDisabled: "自動翻訳はオフです",
   retryTranslation: "翻訳を再試行",
   failuresSuffix: "。失敗した部分は原文を表示します。",
@@ -309,6 +309,9 @@ const ko: Messages = {
   targetLanguage: "대상 언어",
   targetLanguageHint:
     "Google은 zh-CN / zh-TW를 사용하며 Microsoft는 zh-Hans / zh-Hant로 자동 변환합니다.",
+  customLanguage: "기타 언어…",
+  customLanguageHint: "Google 또는 Microsoft 언어 코드를 입력하세요(예: sr-Latn).",
+  errorTargetLanguage: "유효한 언어 코드를 입력하세요.",
   endpoint: "엔드포인트",
   freeEndpointHint: "Google translate_a/t JSON을 반환하는 키 불필요 엔드포인트.",
   googleVersion: "Google API 버전",
@@ -347,12 +350,9 @@ const ko: Messages = {
   errorEndpoint: "유효한 대상 언어와 HTTP(S) 엔드포인트를 입력하세요.",
   errorInvalid: "설정이 올바르지 않습니다.",
   original: "원문",
-  chinese: "중국어",
-  translation: "번역",
   showOriginal: "원문 보기",
-  showChinese: "중국어 보기",
-  showTranslation: "번역 보기",
-  translating: "번역 중…",
+  showLanguage: "{language} 보기",
+  translatingTo: "{language}로 번역 중…",
   autoDisabled: "자동 번역이 꺼져 있습니다",
   retryTranslation: "번역 재시도",
   failuresSuffix: ". 실패한 부분은 원문을 표시합니다.",
@@ -387,6 +387,9 @@ const fr: Messages = {
   targetLanguage: "Langue cible",
   targetLanguageHint:
     "Utilisez zh-CN / zh-TW avec Google ; Microsoft les convertit en zh-Hans / zh-Hant.",
+  customLanguage: "Autre langue…",
+  customLanguageHint: "Saisissez un code de langue Google ou Microsoft, par ex. sr-Latn.",
+  errorTargetLanguage: "Saisissez un code de langue valide.",
   endpoint: "Endpoint",
   freeEndpointHint: "Endpoint sans clé renvoyant le JSON Google translate_a/t.",
   googleVersion: "Version de l’API Google",
@@ -426,12 +429,9 @@ const fr: Messages = {
   errorEndpoint: "Saisissez une langue cible et un endpoint HTTP(S) valides.",
   errorInvalid: "Réglages invalides.",
   original: "Original",
-  chinese: "Chinois",
-  translation: "Traduction",
   showOriginal: "Afficher l’original",
-  showChinese: "Afficher le chinois",
-  showTranslation: "Afficher la traduction",
-  translating: "Traduction…",
+  showLanguage: "Afficher : {language}",
+  translatingTo: "Traduction vers {language}…",
   autoDisabled: "La traduction automatique est désactivée",
   retryTranslation: "Réessayer la traduction",
   failuresSuffix: " ; les parties en échec affichent l’original.",
@@ -465,6 +465,9 @@ const es: Messages = {
   serviceMicrosoft: "Microsoft Translator",
   targetLanguage: "Idioma de destino",
   targetLanguageHint: "Usa zh-CN / zh-TW con Google; Microsoft los convierte a zh-Hans / zh-Hant.",
+  customLanguage: "Otro idioma…",
+  customLanguageHint: "Introduce un código de idioma de Google o Microsoft, p. ej. sr-Latn.",
+  errorTargetLanguage: "Introduce un código de idioma válido.",
   endpoint: "Endpoint",
   freeEndpointHint: "Endpoint sin clave que devuelve JSON de Google translate_a/t.",
   googleVersion: "Versión de la API de Google",
@@ -504,12 +507,9 @@ const es: Messages = {
   errorEndpoint: "Introduce un idioma de destino y un endpoint HTTP(S) válidos.",
   errorInvalid: "Ajustes no válidos.",
   original: "Original",
-  chinese: "Chino",
-  translation: "Traducción",
   showOriginal: "Mostrar original",
-  showChinese: "Mostrar chino",
-  showTranslation: "Mostrar traducción",
-  translating: "Traduciendo…",
+  showLanguage: "Mostrar {language}",
+  translatingTo: "Traduciendo a {language}…",
   autoDisabled: "La traducción automática está desactivada",
   retryTranslation: "Reintentar traducción",
   failuresSuffix: "; las partes fallidas muestran el original.",
@@ -544,6 +544,9 @@ const ptBR: Messages = {
   targetLanguage: "Idioma de destino",
   targetLanguageHint:
     "Use zh-CN / zh-TW no Google; o Microsoft os converte para zh-Hans / zh-Hant.",
+  customLanguage: "Outro idioma…",
+  customLanguageHint: "Informe um código de idioma do Google ou Microsoft, por exemplo sr-Latn.",
+  errorTargetLanguage: "Informe um código de idioma válido.",
   endpoint: "Endpoint",
   freeEndpointHint: "Endpoint sem chave que retorna JSON do Google translate_a/t.",
   googleVersion: "Versão da API do Google",
@@ -583,12 +586,9 @@ const ptBR: Messages = {
   errorEndpoint: "Informe um idioma de destino e um endpoint HTTP(S) válidos.",
   errorInvalid: "Configurações inválidas.",
   original: "Original",
-  chinese: "Chinês",
-  translation: "Tradução",
   showOriginal: "Mostrar original",
-  showChinese: "Mostrar chinês",
-  showTranslation: "Mostrar tradução",
-  translating: "Traduzindo…",
+  showLanguage: "Mostrar {language}",
+  translatingTo: "Traduzindo para {language}…",
   autoDisabled: "A tradução automática está desativada",
   retryTranslation: "Tentar traduzir novamente",
   failuresSuffix: "; as partes com falha mostram o original.",
@@ -623,6 +623,9 @@ const ru: Messages = {
   targetLanguage: "Целевой язык",
   targetLanguageHint:
     "Для Google используйте zh-CN / zh-TW; Microsoft преобразует их в zh-Hans / zh-Hant.",
+  customLanguage: "Другой язык…",
+  customLanguageHint: "Введите код языка Google или Microsoft, например sr-Latn.",
+  errorTargetLanguage: "Введите допустимый код языка.",
   endpoint: "Endpoint",
   freeEndpointHint: "Endpoint без ключа, возвращающий JSON Google translate_a/t.",
   googleVersion: "Версия API Google",
@@ -661,12 +664,9 @@ const ru: Messages = {
   errorEndpoint: "Укажите допустимый целевой язык и endpoint HTTP(S).",
   errorInvalid: "Недопустимые настройки.",
   original: "Оригинал",
-  chinese: "Китайский",
-  translation: "Перевод",
   showOriginal: "Показать оригинал",
-  showChinese: "Показать китайский",
-  showTranslation: "Показать перевод",
-  translating: "Перевод…",
+  showLanguage: "Показать: {language}",
+  translatingTo: "Перевод на {language}…",
   autoDisabled: "Автоматический перевод выключен",
   retryTranslation: "Повторить перевод",
   failuresSuffix: "; для неудачных частей показан оригинал.",
@@ -700,6 +700,9 @@ const ar: Messages = {
   serviceMicrosoft: "Microsoft Translator",
   targetLanguage: "اللغة الهدف",
   targetLanguageHint: "استخدم zh-CN / zh-TW مع Google؛ يحوّلها Microsoft إلى zh-Hans / zh-Hant.",
+  customLanguage: "لغة أخرى…",
+  customLanguageHint: "أدخل رمز لغة Google أو Microsoft، مثل sr-Latn.",
+  errorTargetLanguage: "أدخل رمز لغة صالحًا.",
   endpoint: "Endpoint",
   freeEndpointHint: "endpoint بدون مفتاح يعيد JSON من Google translate_a/t.",
   googleVersion: "إصدار Google API",
@@ -737,12 +740,9 @@ const ar: Messages = {
   errorEndpoint: "أدخل لغة هدف وendpoint HTTP(S) صالحين.",
   errorInvalid: "إعدادات غير صالحة.",
   original: "الأصل",
-  chinese: "الصينية",
-  translation: "الترجمة",
   showOriginal: "عرض الأصل",
-  showChinese: "عرض الصينية",
-  showTranslation: "عرض الترجمة",
-  translating: "جارٍ الترجمة…",
+  showLanguage: "عرض {language}",
+  translatingTo: "جارٍ الترجمة إلى {language}…",
   autoDisabled: "الترجمة التلقائية متوقفة",
   retryTranslation: "إعادة محاولة الترجمة",
   failuresSuffix: "؛ تعرض الأجزاء الفاشلة النص الأصلي.",
@@ -841,7 +841,14 @@ function subscribe(onChange: () => void): () => void {
 }
 
 /** Re-renders when Paseo's persisted app language changes. */
+export function useLocale(): Locale {
+  return useSyncExternalStore(subscribe, getSnapshot, () => "en" as Locale);
+}
+
 export function useMessages(): Messages {
-  const locale = useSyncExternalStore(subscribe, getSnapshot, () => "en" as Locale);
-  return messages[locale];
+  return messages[useLocale()];
+}
+
+export function formatMessage(template: string, values: Record<string, string>): string {
+  return template.replace(/\{(\w+)\}/g, (match, key: string) => values[key] ?? match);
 }

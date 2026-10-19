@@ -108,6 +108,8 @@ export function microsoftLanguage(language: string): string {
   const normalized = language.trim().toLowerCase();
   if (normalized === "zh-cn" || normalized === "zh-sg") return "zh-Hans";
   if (normalized === "zh-tw" || normalized === "zh-hk" || normalized === "zh-mo") return "zh-Hant";
+  if (normalized === "no") return "nb";
+  if (normalized === "tl") return "fil";
   return language;
 }
 

@@ -21,6 +21,7 @@ paseo plugin install /Users/tky/Desktop/projects/paseo-thinking-translate
 
 ## 使用与设置
 
+- 目标语言从下拉列表选择（覆盖中、英、日、韩、法、德、西、葡、俄、阿等常用语言）；列表外的代码可选“其他语言…”手动输入。思考行的目标语言按钮、翻译中提示会显示实际语言名，例如“日本語”“法语”“正在翻译为日语…”。
 - 界面语言跟随 Paseo 的 **Settings → General → Language**，支持 Paseo 的全部 9 种语言（`en`、`zh-CN`、`ja`、`ko`、`fr`、`es`、`pt-BR`、`ru`、`ar`）。桌面/Web 读取 Paseo 的应用语言设置，原生端回退系统语言；插件没有单独的语言开关。设置入口名保持品牌名 “Thinking Translate”。
 - 思考始终默认折叠，**点击展开后才开始翻译**；折叠状态不会发起翻译请求，长会话中未展开的思考不消耗接口配额。
 - 展开后手动折叠再展开会复用已有译文；切换“原文”时也不会发起新的翻译。
@@ -30,20 +31,20 @@ paseo plugin install /Users/tky/Desktop/projects/paseo-thinking-translate
 
 在插件的 **Thinking 翻译** 设置页可修改宿主级设置，支持三种服务：
 
-| 设置                | 默认值                                          | 作用                                                         |
-| ------------------- | ----------------------------------------------- | ------------------------------------------------------------ |
-| 自动翻译            | 开启                                            | 关闭后显示原文，同时停止新的翻译调用                         |
-| 翻译服务            | `Google 免费接口`                               | 可选 Google 免费接口、Google Cloud、微软翻译                 |
-| 目标语言            | `zh-CN`                                         | 例如 `zh-TW`、`ja`、`fr`；微软自动映射为 `zh-Hans`/`zh-Hant` |
-| Endpoint            | `https://clients5.google.com/translate_a/t`     | Google 免 key 接口地址                                       |
-| Google API 版本     | `v2`                                            | v2 使用 API Key；v3 使用 OAuth Access Token 和项目 ID        |
-| Google API Key      | 空                                              | Google Cloud v2 必填                                         |
-| OAuth Access Token  | 空                                              | Google Cloud v3 必填，约 1 小时过期                          |
-| Google 项目 ID      | 空                                              | Google Cloud v3 必填                                         |
-| Google API Endpoint | `https://translation.googleapis.com`            | 基础地址，插件拼接 `/language/translate/v2` 或 `/v3/...`     |
-| 微软 API Key        | 空                                              | Azure 翻译资源密钥，必填                                     |
-| 微软区域            | 空                                              | 多区域资源填 `eastasia` 等；全局资源留空                     |
-| 微软 Endpoint       | `https://api.cognitive.microsofttranslator.com` | 微软翻译基础地址                                             |
+| 设置                | 默认值                                          | 作用                                                          |
+| ------------------- | ----------------------------------------------- | ------------------------------------------------------------- |
+| 自动翻译            | 开启                                            | 关闭后显示原文，同时停止新的翻译调用                          |
+| 翻译服务            | `Google 免费接口`                               | 可选 Google 免费接口、Google Cloud、微软翻译                  |
+| 目标语言            | `zh-CN`                                         | 下拉选择常用语言或选“其他语言…”输入代码；微软自动映射中文代码 |
+| Endpoint            | `https://clients5.google.com/translate_a/t`     | Google 免 key 接口地址                                        |
+| Google API 版本     | `v2`                                            | v2 使用 API Key；v3 使用 OAuth Access Token 和项目 ID         |
+| Google API Key      | 空                                              | Google Cloud v2 必填                                          |
+| OAuth Access Token  | 空                                              | Google Cloud v3 必填，约 1 小时过期                           |
+| Google 项目 ID      | 空                                              | Google Cloud v3 必填                                          |
+| Google API Endpoint | `https://translation.googleapis.com`            | 基础地址，插件拼接 `/language/translate/v2` 或 `/v3/...`      |
+| 微软 API Key        | 空                                              | Azure 翻译资源密钥，必填                                      |
+| 微软区域            | 空                                              | 多区域资源填 `eastasia` 等；全局资源留空                      |
+| 微软 Endpoint       | `https://api.cognitive.microsofttranslator.com` | 微软翻译基础地址                                              |
 
 源语言始终自动识别；目标为中文时，中文原文不会自动反向翻译为英文。保存设置后会取消旧服务请求并清空服务端缓存。旧版本（只有 `endpoint` 三项）的设置会自动迁移为 Google 免费接口，不会丢失已保存的 endpoint。
 

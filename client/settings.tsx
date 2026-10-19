@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ScrollView, Text } from "react-native";
 import { useSettings, type PluginSurfaceProps, type SettingsState } from "@getpaseo/plugin/client";
 import {
@@ -15,9 +15,13 @@ import {
   type GoogleApiVersion,
   type TranslationProvider,
 } from "../shared/contract";
-import { useMessages, type Messages } from "./i18n";
+import { isKnownTranslationLanguage, translationLanguages } from "../shared/languages";
+import { languageName } from "../shared/locale";
+import { useLocale, useMessages, type Messages } from "./i18n";
 
 type Ready = Extract<SettingsState<typeof settingsSchema>, { status: "ready" }>;
+
+const CUSTOM_LANGUAGE = "__custom__";
 
 function providerOptions(m: Messages): readonly { label: string; value: TranslationProvider }[] {
   return [
@@ -46,6 +50,7 @@ function validationMessage(error: ZodError, m: Messages): string {
     case "microsoftApiKey":
       return m.errorMicrosoftKey;
     case "targetLanguage":
+      return m.errorTargetLanguage;
     case "endpoint":
     case "googleEndpoint":
     case "microsoftEndpoint":
@@ -69,8 +74,21 @@ function Controls({
   onReload(): void;
 }) {
   const m = useMessages();
+  const locale = useLocale();
   const [draft, setDraft] = useState(() => ({ values: state.values, revision: state.revision }));
   const [validation, setValidation] = useState<string | null>(null);
+  const [customLanguage, setCustomLanguage] = useState(
+    () => !isKnownTranslationLanguage(state.values.targetLanguage),
+  );
+  const languageOptions = useMemo(
+    () => [
+      ...translationLanguages
+        .map((code) => ({ value: code, label: languageName(code, locale) }))
+        .sort((left, right) => left.label.localeCompare(right.label, locale)),
+      { value: CUSTOM_LANGUAGE, label: m.customLanguage },
+    ],
+    [locale, m.customLanguage],
+  );
   function change(values: Ready["values"]) {
     onEdit();
     setValidation(null);
@@ -92,13 +110,31 @@ function Controls({
         disabled={state.saving}
         onValueChange={(provider) => change({ ...values, provider })}
       />
-      <SettingsInput
+      <SettingsSelect
         label={m.targetLanguage}
         hint={m.targetLanguageHint}
-        initialValue={values.targetLanguage}
+        value={customLanguage ? CUSTOM_LANGUAGE : values.targetLanguage}
+        options={languageOptions}
         disabled={state.saving}
-        onChangeText={(targetLanguage) => change({ ...values, targetLanguage })}
+        onValueChange={(language) => {
+          if (language === CUSTOM_LANGUAGE) {
+            setCustomLanguage(true);
+            return;
+          }
+          setCustomLanguage(false);
+          change({ ...values, targetLanguage: language });
+        }}
       />
+      {customLanguage ? (
+        <SettingsInput
+          key="custom-target-language"
+          label={m.customLanguage}
+          hint={m.customLanguageHint}
+          initialValue={values.targetLanguage}
+          disabled={state.saving}
+          onChangeText={(targetLanguage) => change({ ...values, targetLanguage })}
+        />
+      ) : null}
       {values.provider === "google-free" ? (
         <SettingsInput
           key="google-free-endpoint"

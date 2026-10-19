@@ -133,7 +133,7 @@ try {
   assert.equal(counts.size, 0, "collapsed thinking must not request translations");
   assert.equal(await markdown.count(), 0);
   await page.getByRole("button", { name: "Thinking", exact: true }).click();
-  await page.getByText("翻译中…").waitFor();
+  await page.getByText("正在翻译为简体中文…").waitFor();
   await visible("First");
   await waitFor(() => held.size === 2);
   holdFirst = false;
@@ -152,7 +152,7 @@ try {
   await visible("First");
   assert.doesNotMatch(await markdown.innerText(), /译文:/);
   assert.doesNotMatch(await markdown.innerText(), /\*\*bold\*\*/);
-  await page.getByRole("button", { name: "显示中文", exact: true }).click();
+  await page.getByRole("button", { name: "显示简体中文", exact: true }).click();
   await page.evaluate(() =>
     window.harness.update({ text: "First **bold**.\n\nTail **still growing" }),
   );
@@ -172,13 +172,13 @@ try {
   await visible("译文:New");
   held.get("Old")();
   held.clear();
-  await page.getByText("翻译中…").waitFor({ state: "detached" });
+  await page.getByText("正在翻译为简体中文…").waitFor({ state: "detached" });
   assert.doesNotMatch(await markdown.innerText(), /Old/);
 
   const rich =
     "# Heading\n\n**bold *nested*** and ~~gone~~.\n\n1. first\n   - nested item\n\n> quoted\n\n| Name | Value |\n| --- | --- |\n| One | Two |\n\n[Docs](https://example.com)\n\n\\*literal\\* and `a ** b`\n\n```js\nconst x = '**code**';\n```";
   await page.evaluate((text) => window.harness.update({ text, phase: "complete" }), rich);
-  await page.getByText("翻译中…").waitFor({ state: "detached" });
+  await page.getByText("正在翻译为简体中文…").waitFor({ state: "detached" });
   await visible("译文:Heading");
   assert.match(await markdown.innerText(), /a \*\* b/);
   assert.match(await markdown.innerText(), /const x = '\*\*code\*\*';/);
@@ -238,7 +238,7 @@ try {
     (value) => document.querySelector('[aria-label="Endpoint"]')?.value === value,
     endpoint,
   );
-  await page.getByRole("textbox", { name: "目标语言", exact: true }).fill("fr");
+  await page.getByRole("button", { name: "目标语言: 法语", exact: true }).click();
   await page.getByRole("button", { name: "保存", exact: true }).click();
   await page.getByText("设置已保存").waitFor();
   assert.equal(settings.values.targetLanguage, "fr");
@@ -256,10 +256,16 @@ try {
     localStorage.setItem("@paseo:app-settings", JSON.stringify({ language: "en" }));
   });
   await english.goto(`http://127.0.0.1:${server.address().port}`);
-  await english.getByRole("button", { name: "Show original", exact: true }).waitFor();
+  await english.getByRole("button", { name: "Show original", exact: true }).click();
+  await english.getByRole("button", { name: /Show .*Chinese/ }).waitFor();
+  await english.evaluate(() => window.harness.settings({ targetLanguage: "ja" }));
+  await english.getByRole("button", { name: "Show Japanese", exact: true }).waitFor();
   await english.evaluate(() => window.harness.update({ screen: "settings" }));
   await english.getByText("Translation service", { exact: true }).waitFor();
-  await english.getByRole("textbox", { name: "Target language", exact: true }).waitFor();
+  await english.getByText("Target language", { exact: true }).waitFor();
+  await english
+    .getByRole("button", { name: "Target language: Simplified Chinese", exact: true })
+    .waitFor();
   await english
     .getByRole("button", { name: "Translation service: Google keyless endpoint", exact: true })
     .waitFor();

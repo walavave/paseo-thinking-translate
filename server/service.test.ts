@@ -333,6 +333,8 @@ describe("Microsoft Translator", () => {
     expect(microsoftLanguage("zh-CN")).toBe("zh-Hans");
     expect(microsoftLanguage("zh-TW")).toBe("zh-Hant");
     expect(microsoftLanguage("zh-HK")).toBe("zh-Hant");
+    expect(microsoftLanguage("no")).toBe("nb");
+    expect(microsoftLanguage("tl")).toBe("fil");
     expect(microsoftLanguage("ja")).toBe("ja");
     expect(parseMicrosoft([{ translations: [{ text: "一" }] }])).toEqual({
       text: "一",

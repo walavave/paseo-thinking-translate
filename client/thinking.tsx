@@ -5,11 +5,13 @@ import { useRpc, useSettings, type PluginTimelineItemProps } from "@getpaseo/plu
 import { settings, translate, type Reasoning } from "../shared/contract";
 import { parseMarkdown, translationTexts } from "../shared/markdown";
 import { createBatchTranslator } from "./batch";
-import { useMessages } from "./i18n";
+import { languageName } from "../shared/locale";
+import { formatMessage, useLocale, useMessages } from "./i18n";
 import { Markdown } from "./markdown";
 
 export function Thinking({ item, theme, layout }: PluginTimelineItemProps<Reasoning>) {
   const m = useMessages();
+  const locale = useLocale();
   const { text, phase } = item.data;
   const preferences = useSettings(settings);
   const rpc = useRpc(translate);
@@ -23,9 +25,9 @@ export function Thinking({ item, theme, layout }: PluginTimelineItemProps<Reason
   const values = preferences.status === "ready" ? preferences.values : null;
   const enabled = values?.enabled === true;
   const translating = enabled && expanded && !original;
-  const chineseTarget = /^zh(?:-|$)/i.test(values?.targetLanguage ?? "zh-CN");
-  const translationLabel = chineseTarget ? m.chinese : m.translation;
-  const showTranslationLabel = chineseTarget ? m.showChinese : m.showTranslation;
+  const targetLabel = languageName(values?.targetLanguage ?? "zh-CN", locale);
+  const showTranslationLabel = formatMessage(m.showLanguage, { language: targetLabel });
+  const translatingLabel = formatMessage(m.translatingTo, { language: targetLabel });
   const queries = useQueries({
     queries: texts.map((source) => ({
       // A settings revision prevents a late RPC from populating a later configuration's cache.
@@ -79,10 +81,10 @@ export function Thinking({ item, theme, layout }: PluginTimelineItemProps<Reason
           style={button}
         >
           <Text style={[label, { color: colors.accent }]}>
-            {original ? translationLabel : m.original}
+            {original ? targetLabel : m.original}
           </Text>
         </Pressable>
-        {enabled && expanded && pending ? <Text style={label}>{m.translating}</Text> : null}
+        {enabled && expanded && pending ? <Text style={label}>{translatingLabel}</Text> : null}
         {!enabled && preferences.status === "ready" ? (
           <Text style={label}>{m.autoDisabled}</Text>
         ) : null}

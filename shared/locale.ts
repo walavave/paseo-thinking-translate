@@ -46,3 +46,22 @@ export function systemLocales(): string[] {
     return [];
   }
 }
+
+/** Localized language name for a translation target, e.g. `ja` → 日本語 / Japanese. */
+export function languageName(code: string, locale: Locale): string {
+  const normalized = code.trim().replace(/_/g, "-");
+  if (!normalized) return code;
+  const lower = normalized.toLowerCase();
+  const displayCode =
+    lower === "zh-cn" || lower === "zh-sg" || lower.startsWith("zh-hans")
+      ? "zh-Hans"
+      : lower === "zh-tw" || lower === "zh-hk" || lower === "zh-mo" || lower.startsWith("zh-hant")
+        ? "zh-Hant"
+        : normalized;
+  try {
+    const names = new Intl.DisplayNames([locale], { type: "language", fallback: "code" });
+    return names.of(displayCode) ?? normalized;
+  } catch {
+    return normalized;
+  }
+}
