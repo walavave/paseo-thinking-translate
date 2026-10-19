@@ -14,15 +14,21 @@ const { TranslationService } = await import("../.artifacts/service.mjs");
 const service = new TranslationService();
 try {
   const result = await service.translate(
-    "https://clients5.google.com/translate_a/t",
-    "zh-CN",
+    {
+      provider: "google-free",
+      endpoint: "https://clients5.google.com/translate_a/t",
+      language: "zh-CN",
+    },
     "I need to inspect the failing test before changing the code.",
   );
   assert.equal(result.status, "translated", JSON.stringify(result));
   assert.match(result.text, /\p{Script=Han}/u);
   const chinese = await service.translate(
-    "https://clients5.google.com/translate_a/t",
-    "zh-CN",
+    {
+      provider: "google-free",
+      endpoint: "https://clients5.google.com/translate_a/t",
+      language: "zh-CN",
+    },
     "先检查测试，再修改代码。",
   );
   assert.equal(chinese.status, "translated", JSON.stringify(chinese));

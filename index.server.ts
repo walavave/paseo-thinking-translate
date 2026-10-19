@@ -1,6 +1,37 @@
 import type { PluginServerContext } from "@getpaseo/plugin/server";
-import { settings, translate } from "./shared/contract";
-import { TranslationService } from "./server/service";
+import { settings, translate, type Settings, type TranslationResult } from "./shared/contract";
+import { TranslationService, type TranslationConfig } from "./server/service";
+
+export function translationConfig(values: Settings): TranslationConfig {
+  const language = values.targetLanguage;
+  switch (values.provider) {
+    case "google-free":
+      return { provider: "google-free", language, endpoint: values.endpoint };
+    case "google-cloud":
+      return values.googleVersion === "v2"
+        ? {
+            provider: "google-v2",
+            language,
+            endpoint: values.googleEndpoint,
+            apiKey: values.googleApiKey,
+          }
+        : {
+            provider: "google-v3",
+            language,
+            endpoint: values.googleEndpoint,
+            accessToken: values.googleAccessToken,
+            projectId: values.googleProjectId,
+          };
+    case "microsoft":
+      return {
+        provider: "microsoft",
+        language,
+        endpoint: values.microsoftEndpoint,
+        apiKey: values.microsoftApiKey,
+        region: values.microsoftRegion,
+      };
+  }
+}
 
 export default function contribute(server: PluginServerContext) {
   const preferences = server.registerSettings(settings);
@@ -11,17 +42,19 @@ export default function contribute(server: PluginServerContext) {
   });
   server.handle(translate, async ({ texts }) => {
     const state = await preferences.read();
-    if (state.status !== "ready") throw new Error("Translation settings are invalid");
-    if (!state.values.enabled) {
+    if (state.status !== "ready") {
       return {
-        results: texts.map(() => ({ status: "error" as const, code: "disabled" as const })),
+        results: texts.map((): TranslationResult => ({ status: "error", code: "config" })),
       };
     }
-    const { endpoint, targetLanguage } = state.values;
+    if (!state.values.enabled) {
+      return {
+        results: texts.map((): TranslationResult => ({ status: "error", code: "disabled" })),
+      };
+    }
+    const config = translationConfig(state.values);
     return {
-      results: await Promise.all(
-        texts.map((text) => service.translate(endpoint, targetLanguage, text)),
-      ),
+      results: await Promise.all(texts.map((text) => service.translate(config, text))),
     };
   });
   return () => {

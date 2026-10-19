@@ -2,7 +2,7 @@
   "name": "paseo-thinking-translate",
   "version": "0.1.0",
   "private": true,
-  "description": "Translate reasoning into Chinese with Google Translate and preserve Markdown.",
+  "description": "Translate reasoning into Chinese with Google or Microsoft and preserve Markdown.",
   "license": "MIT",
   "files": [
     "paseo-plugin.json",
@@ -18,7 +18,7 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint index.client.tsx index.server.ts client server shared scripts tests",
+    "lint": "oxlint index.client.tsx index.server.ts index.server.test.ts client server shared scripts tests",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
     "test": "vitest run --bail=1",

@@ -67,7 +67,9 @@ const server = createServer(async (req, res) => {
       for await (const chunk of req) body += chunk;
       const { texts } = JSON.parse(body);
       const results = await Promise.all(
-        texts.map((text) => translator.translate(endpoint, "zh-CN", text)),
+        texts.map((text) =>
+          translator.translate({ provider: "google-free", endpoint, language: "zh-CN" }, text),
+        ),
       );
       res.setHeader("Content-Type", "application/json");
       res.end(JSON.stringify({ results }));
@@ -92,7 +94,20 @@ const server = createServer(async (req, res) => {
 });
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
 endpoint = `http://127.0.0.1:${server.address().port}/google`;
-settings.values = { enabled: true, targetLanguage: "zh-CN", endpoint };
+settings.values = {
+  enabled: true,
+  provider: "google-free",
+  targetLanguage: "zh-CN",
+  endpoint,
+  googleVersion: "v2",
+  googleEndpoint: `http://127.0.0.1:${server.address().port}/google-cloud`,
+  googleApiKey: "",
+  googleAccessToken: "",
+  googleProjectId: "",
+  microsoftEndpoint: `http://127.0.0.1:${server.address().port}/microsoft`,
+  microsoftApiKey: "",
+  microsoftRegion: "",
+};
 const browser = await chromium.launch({ channel: "chrome", headless: true });
 const page = await browser.newPage({ viewport: { width: 1100, height: 850 } });
 const errors = [];
@@ -196,6 +211,17 @@ try {
   await visible("Heading");
   assert.doesNotMatch(await markdown.innerText(), /译文:/);
   await page.evaluate(() => window.harness.update({ screen: "settings", dark: false }));
+  await page.getByRole("button", { name: "翻译服务: 微软翻译", exact: true }).click();
+  await page.getByRole("textbox", { name: "微软 API Key", exact: true }).waitFor();
+  await page.getByRole("textbox", { name: "微软区域", exact: true }).waitFor();
+  await page.getByRole("button", { name: "翻译服务: Google Cloud", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Google API 版本: v3（OAuth Access Token）", exact: true })
+    .click();
+  await page.getByRole("textbox", { name: "OAuth Access Token", exact: true }).waitFor();
+  await page.getByRole("textbox", { name: "Google Cloud 项目 ID", exact: true }).waitFor();
+  await page.getByRole("button", { name: "翻译服务: Google 免费接口", exact: true }).click();
+  await page.getByRole("textbox", { name: "Endpoint", exact: true }).waitFor();
   await page.getByRole("textbox", { name: "Endpoint", exact: true }).fill("invalid");
   await page.getByRole("button", { name: "保存", exact: true }).click();
   await page.getByText("请填写有效的目标语言和 HTTP(S) endpoint。").waitFor();

@@ -37,8 +37,17 @@ let snapshot = {
   revision: "initial",
   values: {
     enabled: true,
+    provider: "google-free",
     targetLanguage: "zh-CN",
     endpoint: new URL("/google", window.location.href).href,
+    googleVersion: "v2",
+    googleEndpoint: new URL("/google-cloud", window.location.href).href,
+    googleApiKey: "",
+    googleAccessToken: "",
+    googleProjectId: "",
+    microsoftEndpoint: new URL("/microsoft", window.location.href).href,
+    microsoftApiKey: "",
+    microsoftRegion: "",
   },
   saving: false,
   saveError: null,
@@ -120,6 +129,23 @@ const modules = {
         onValueChange={onValueChange}
         disabled={disabled}
       />
+    ),
+    SettingsSelect: ({ label, value, options, onValueChange, disabled }) => (
+      <native.View>
+        <native.Text>{label}</native.Text>
+        {options.map((option) => (
+          <native.Pressable
+            key={option.value}
+            accessibilityRole="button"
+            accessibilityLabel={`${label}: ${option.label}`}
+            accessibilityState={{ selected: value === option.value }}
+            disabled={disabled}
+            onPress={() => onValueChange(option.value)}
+          >
+            <native.Text>{option.label}</native.Text>
+          </native.Pressable>
+        ))}
+      </native.View>
     ),
     SettingsAction: ({ actionLabel, onPress, disabled }) => (
       <native.Pressable

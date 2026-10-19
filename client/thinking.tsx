@@ -11,8 +11,10 @@ const failures: Record<string, string> = {
   network: "网络错误",
   timeout: "请求超时",
   rate_limit: "请求被限流",
+  auth: "密钥无效或无权限",
   http: "服务返回错误",
   invalid_response: "服务响应格式异常",
+  config: "翻译设置不完整",
   disposed: "翻译已取消",
   disabled: "自动翻译已关闭",
 };
@@ -36,6 +38,8 @@ export function Thinking({ item, theme, layout }: PluginTimelineItemProps<Reason
       queryKey: [
         "thinking-translate",
         preferences.status === "ready" ? preferences.revision : null,
+        values?.provider,
+        values?.googleVersion,
         values?.endpoint,
         values?.targetLanguage,
         source,
