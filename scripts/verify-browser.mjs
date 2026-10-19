@@ -238,9 +238,121 @@ try {
     (value) => document.querySelector('[aria-label="Endpoint"]')?.value === value,
     endpoint,
   );
-  await page.getByRole("button", { name: "目标语言: 法语", exact: true }).click();
+  const languageList = page.getByTestId("target-language-options");
+  for (const viewport of [
+    { width: 1100, height: 850 },
+    { width: 375, height: 812 },
+    { width: 375, height: 420 },
+  ]) {
+    for (const dark of [false, true]) {
+      await page.setViewportSize(viewport);
+      await page.evaluate(
+        (dark) => window.harness.update({ dark, compact: window.innerWidth < 600 }),
+        dark,
+      );
+      const trigger = page.getByTestId("target-language-trigger");
+      await trigger.click();
+      assert.equal(await trigger.getAttribute("aria-expanded"), "true");
+      await languageList.evaluate((element) => element.scrollIntoView({ block: "center" }));
+      const dimensions = await languageList.evaluate((element) => ({
+        height: element.clientHeight,
+        content: element.scrollHeight,
+        overflow: getComputedStyle(element).overflowY,
+        bounds: element.getBoundingClientRect().toJSON(),
+      }));
+      assert.ok(dimensions.height > 0);
+      assert.ok(dimensions.height <= Math.min(320, viewport.height * 0.4));
+      assert.ok(dimensions.content > dimensions.height, "language list must overflow internally");
+      assert.equal(dimensions.overflow, "auto");
+      assert.ok(dimensions.bounds.x >= 0 && dimensions.bounds.right <= viewport.width);
+      assert.ok(
+        dimensions.bounds.y >= 0 && dimensions.bounds.bottom <= viewport.height,
+        `language list must fit viewport: ${JSON.stringify({ viewport, dimensions })}`,
+      );
+      const last = languageList.getByRole("button").last();
+      assert.equal(await last.getAttribute("aria-label"), "目标语言: 其他语言…");
+      const before = await last.boundingBox();
+      assert.ok(before.y >= dimensions.bounds.bottom, "bottom option initially needs scrolling");
+      await languageList.hover();
+      await page.mouse.wheel(0, 10000);
+      await page.waitForFunction(() => {
+        const list = document.querySelector('[data-testid="target-language-options"]');
+        return list.scrollTop + list.clientHeight >= list.scrollHeight - 1;
+      });
+      const after = await last.boundingBox();
+      const bounds = await languageList.boundingBox();
+      assert.ok(after.y >= bounds.y && after.y + after.height <= bounds.y + bounds.height);
+      assert.equal(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+        true,
+      );
+      await page.screenshot({
+        path: new URL(
+          `.artifacts/languages-${viewport.width}x${viewport.height}-${dark ? "dark" : "light"}.png`,
+          root,
+        ).pathname,
+      });
+      if (viewport.height === 420 && dark) {
+        await last.click();
+        await languageList.waitFor({ state: "detached" });
+        const input = page.getByRole("textbox", { name: "其他语言…", exact: true });
+        await input.fill("sr-Latn");
+        await page.getByRole("button", { name: "保存", exact: true }).click();
+        await page.getByText("设置已保存").waitFor();
+        assert.equal(settings.values.targetLanguage, "sr-Latn");
+        const previousInput = await input.elementHandle();
+        await page.getByRole("button", { name: "重新读取", exact: true }).click();
+        await page.waitForFunction((element) => !element.isConnected, previousInput);
+        assert.equal(await input.inputValue(), "sr-Latn");
+      } else {
+        const bottomLanguage = languageList.getByRole("button").nth(-2);
+        await bottomLanguage.click();
+        await languageList.waitFor({ state: "detached" });
+        await page.getByRole("button", { name: "保存", exact: true }).click();
+        await page.getByText("设置已保存").waitFor();
+        assert.equal(settings.values.targetLanguage, "vi");
+        await page.getByRole("button", { name: "目标语言: 越南语", exact: true }).click();
+        await languageList.getByRole("button", { name: "目标语言: 简体中文", exact: true }).click();
+      }
+      const settingsScroll = page.getByTestId("translation-settings");
+      await page.getByRole("button", { name: "重新读取", exact: true }).scrollIntoViewIfNeeded();
+      if (viewport.height === 420) {
+        assert.ok(
+          await settingsScroll.evaluate((element) => element.scrollTop > 0),
+          "settings page must still scroll independently",
+        );
+      }
+    }
+  }
+  await page.setViewportSize({ width: 1100, height: 850 });
+  await page.evaluate(() => window.harness.update({ dark: false, compact: false }));
+  await page.getByRole("button", { name: "目标语言: 其他语言…", exact: true }).click();
+  await languageList.getByRole("button", { name: "目标语言: 法语", exact: true }).click();
+  await languageList.waitFor({ state: "detached" });
+  const frenchTrigger = page.getByTestId("target-language-trigger");
+  assert.equal(await frenchTrigger.evaluate((element) => element === document.activeElement), true);
+  await frenchTrigger.press("Enter");
+  assert.equal(await frenchTrigger.getAttribute("aria-expanded"), "true");
+  await languageList.getByRole("button", { name: "目标语言: 法语", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await languageList.waitFor({ state: "detached" });
+  await frenchTrigger.click();
+  await frenchTrigger.click();
+  await languageList.waitFor({ state: "detached" });
+  let releaseSave;
+  await page.route("**/settings", async (route) => {
+    if (route.request().method() === "POST") {
+      await new Promise((resolve) => (releaseSave = resolve));
+    }
+    await route.continue();
+  });
   await page.getByRole("button", { name: "保存", exact: true }).click();
+  await waitFor(() => typeof releaseSave === "function");
+  assert.equal(await frenchTrigger.getAttribute("aria-disabled"), "true");
+  assert.equal(await frenchTrigger.getAttribute("aria-expanded"), "false");
+  releaseSave();
   await page.getByText("设置已保存").waitFor();
+  await page.unroute("**/settings");
   assert.equal(settings.values.targetLanguage, "fr");
   await page.getByRole("textbox", { name: "Endpoint", exact: true }).fill(endpoint + "/reject");
   await page.getByRole("button", { name: "保存", exact: true }).click();
@@ -263,9 +375,7 @@ try {
   await english.evaluate(() => window.harness.update({ screen: "settings" }));
   await english.getByText("Translation service", { exact: true }).waitFor();
   await english.getByText("Target language", { exact: true }).waitFor();
-  await english
-    .getByRole("button", { name: "Target language: Simplified Chinese", exact: true })
-    .waitFor();
+  await english.getByRole("button", { name: "Target language: Japanese", exact: true }).waitFor();
   await english
     .getByRole("button", { name: "Translation service: Google keyless endpoint", exact: true })
     .waitFor();
@@ -275,7 +385,7 @@ try {
   await english.getByText("翻訳サービス", { exact: true }).waitFor();
   await english.close();
   console.log(
-    "Browser integration passed: lazy translation, collapsed no-request, pending, streaming reuse, stale updates, retry, original toggle, collapse, Markdown, light/dark, 375px layout, settings validation/save/conflict/reload and Paseo-language following",
+    "Browser integration passed: lazy translation, collapsed no-request, pending, streaming reuse, stale updates, retry, original toggle, collapse, Markdown, light/dark, 375px layout, language-list wheel scrolling and bottom selection, short viewports, keyboard selection, custom-language persistence, settings validation/save/conflict/reload and Paseo-language following",
   );
 } finally {
   translator.dispose();

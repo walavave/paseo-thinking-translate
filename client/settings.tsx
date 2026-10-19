@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
-import { ScrollView, Text } from "react-native";
+import { useMemo, useRef, useState } from "react";
+import { Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 import { useSettings, type PluginSurfaceProps, type SettingsState } from "@getpaseo/plugin/client";
 import {
   SettingsAction,
   SettingsInput,
+  SettingsRow,
   SettingsSection,
   SettingsSelect,
   SettingsSwitch,
@@ -22,6 +23,108 @@ import { useLocale, useMessages, type Messages } from "./i18n";
 type Ready = Extract<SettingsState<typeof settingsSchema>, { status: "ready" }>;
 
 const CUSTOM_LANGUAGE = "__custom__";
+
+function LanguageSelect({
+  label,
+  hint,
+  value,
+  options,
+  disabled,
+  theme,
+  onValueChange,
+}: {
+  label: string;
+  hint: string;
+  value: string;
+  options: readonly { label: string; value: string }[];
+  disabled: boolean;
+  theme: PluginSurfaceProps["theme"];
+  onValueChange(value: string): void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const trigger = useRef<View>(null);
+  const { height } = useWindowDimensions();
+  const { colors } = theme;
+  const selectedLabel = options.find((option) => option.value === value)?.label ?? value;
+  return (
+    <SettingsRow label={label} hint={hint}>
+      <View style={{ width: 220, maxWidth: "100%", gap: 4 }}>
+        <Pressable
+          ref={trigger}
+          testID="target-language-trigger"
+          accessibilityRole="button"
+          accessibilityLabel={`${label}: ${selectedLabel}`}
+          accessibilityState={{ expanded: expanded && !disabled, disabled }}
+          aria-expanded={expanded && !disabled}
+          disabled={disabled}
+          onPress={() => setExpanded((current) => !current)}
+          style={({ pressed }) => ({
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            borderWidth: 1,
+            borderRadius: 6,
+            borderColor: colors.border,
+            backgroundColor: pressed ? colors.surface2 : colors.surface0,
+            opacity: disabled ? 0.5 : 1,
+          })}
+        >
+          <Text style={{ color: colors.foreground, flexShrink: 1 }}>{selectedLabel}</Text>
+          <Text style={{ color: colors.foregroundMuted }}>{expanded ? "\u2303" : "\u2304"}</Text>
+        </Pressable>
+        {expanded && !disabled ? (
+          <ScrollView
+            testID="target-language-options"
+            accessibilityLabel={label}
+            nestedScrollEnabled
+            showsVerticalScrollIndicator
+            keyboardShouldPersistTaps="handled"
+            style={{
+              maxHeight: Math.min(320, height * 0.4),
+              borderWidth: 1,
+              borderRadius: 6,
+              borderColor: colors.border,
+              backgroundColor: colors.surface1,
+            }}
+          >
+            {options.map((option) => (
+              <Pressable
+                key={option.value}
+                accessibilityRole="button"
+                accessibilityLabel={`${label}: ${option.label}`}
+                accessibilityState={{ selected: option.value === value }}
+                aria-selected={option.value === value}
+                onPress={() => {
+                  onValueChange(option.value);
+                  setExpanded(false);
+                  trigger.current?.focus();
+                }}
+                style={({ pressed }) => ({
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  backgroundColor:
+                    pressed || option.value === value ? colors.surface2 : colors.surface1,
+                })}
+              >
+                <Text
+                  style={{
+                    color: option.value === value ? colors.accent : colors.foreground,
+                    fontWeight: option.value === value ? "600" : "400",
+                  }}
+                >
+                  {option.label}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        ) : null}
+      </View>
+    </SettingsRow>
+  );
+}
 
 function providerOptions(m: Messages): readonly { label: string; value: TranslationProvider }[] {
   return [
@@ -110,9 +213,10 @@ function Controls({
         disabled={state.saving}
         onValueChange={(provider) => change({ ...values, provider })}
       />
-      <SettingsSelect
+      <LanguageSelect
         label={m.targetLanguage}
         hint={m.targetLanguageHint}
+        theme={theme}
         value={customLanguage ? CUSTOM_LANGUAGE : values.targetLanguage}
         options={languageOptions}
         disabled={state.saving}
@@ -261,8 +365,9 @@ export function TranslationSettings({ theme, layout }: PluginSurfaceProps) {
   const [saved, setSaved] = useState(false);
   return (
     <ScrollView
+      testID="translation-settings"
       contentContainerStyle={{ padding: layout.compact ? 16 : 24, gap: 12 }}
-      style={{ backgroundColor: theme.colors.surface0 }}
+      style={{ flex: 1, minHeight: 0, backgroundColor: theme.colors.surface0 }}
     >
       {state.status === "ready" ? (
         <Controls

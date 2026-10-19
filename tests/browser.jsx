@@ -107,6 +107,15 @@ const modules = {
   "@getpaseo/plugin": sdk,
   "@getpaseo/plugin/client": { useSettings, useRpc },
   "@getpaseo/plugin/client/ui": {
+    SettingsRow: ({ label, hint, children }) => (
+      <native.View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+        <native.View style={{ flexGrow: 1, flexShrink: 1, flexBasis: 160 }}>
+          <native.Text>{label}</native.Text>
+          <native.Text>{hint}</native.Text>
+        </native.View>
+        <native.View style={{ flexShrink: 1, maxWidth: "100%" }}>{children}</native.View>
+      </native.View>
+    ),
     SettingsSection: ({ title, info, children }) => (
       <native.View style={{ gap: 12 }}>
         <native.Text>{title}</native.Text>
@@ -206,11 +215,13 @@ function App() {
   const Settings = settingsScreen;
   if (state.screen === "settings")
     return (
-      <Settings
-        theme={{ colors }}
-        layout={{ platform: "web", compact: state.compact }}
-        host={{ id: "test", label: "Test host" }}
-      />
+      <native.View style={{ height: "100vh" }}>
+        <Settings
+          theme={{ colors }}
+          layout={{ platform: "web", compact: state.compact }}
+          host={{ id: "test", label: "Test host" }}
+        />
+      </native.View>
     );
   return (
     <native.View style={{ padding: state.compact ? 16 : 32, maxWidth: 840, width: "100%" }}>
